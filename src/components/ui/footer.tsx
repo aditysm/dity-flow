@@ -60,7 +60,7 @@ export function Footer({
     },
   ],
   mainLinks = [
-    { href: "/app/", label: "Optimizer Transfer" },
+    { href: "/optimizer-transfer/", label: "Optimizer Transfer" },
     { href: "/#features", label: "Optimizer Tagihan" },
     { href: "/#features", label: "Optimizer Tarik Tunai" },
     { href: "/#features", label: "Split-Bill Router" },

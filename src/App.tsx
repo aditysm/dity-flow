@@ -207,7 +207,7 @@ export default function App() {
                 const visibilityClass = isHiddenOnMobile ? "hidden sm:block" : "block";
 
                 return feature.active ? (
-                  <a key={i} href="/app/" className={cn("h-full", visibilityClass)}>
+                  <a key={i} href="/optimizer-transfer/" className={cn("h-full", visibilityClass)}>
                     <FeatureCard 
                       feature={feature} 
                       className="h-full border-none"

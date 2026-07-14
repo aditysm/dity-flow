@@ -26,7 +26,7 @@ export function Navbar() {
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const path = window.location.pathname;
-    const isSubPage = path.includes('/app') || path.includes('/help') || path.includes('/privacy') || path.includes('/terms');
+    const isSubPage = path.includes('/optimizer-transfer') || path.includes('/help') || path.includes('/privacy') || path.includes('/terms');
     const isHome = !isSubPage;
 
     if (isHome) {

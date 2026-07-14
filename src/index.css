@@ -5,8 +5,8 @@
   --color-theme-card: var(--color-card);
   --color-theme-accent: var(--color-accent);
   --color-theme-textDim: var(--color-text-dim);
-  --color-theme-border: var(--color-border);
-  --color-theme-borderDim: var(--color-border-dim);
+  --color-theme-border: var(--color-app-border);
+  --color-theme-borderDim: var(--color-app-border-dim);
   --color-theme-main: var(--color-text-main);
   --color-theme-inverted: var(--color-text-inv);
   --color-theme-badge: var(--color-badge);
