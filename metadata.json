@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Dity Flow",
+  "description": "Optimalkan rute transfer uang Anda untuk menghemat biaya admin hingga 100% dengan Dity Flow.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

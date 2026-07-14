@@ -121,7 +121,7 @@ const thirdColumn = testimonials.slice(6, 9);
 import { TestimonialsColumn } from "@/src/components/ui/testimonials-columns-1";
 import { CallToAction } from "@/src/components/ui/cta-3";
 import { Footer } from "@/src/components/ui/footer";
-import { Github, Twitter, Instagram } from "lucide-react";
+import { Instagram, Mail, MessageCircle } from "lucide-react";
 
 type ViewAnimationProps = {
   delay?: number;
@@ -150,6 +150,10 @@ function AnimatedContainer({ className, delay = 0.1, children }: ViewAnimationPr
 }
 
 export default function App() {
+  React.useEffect(() => {
+    document.title = "Dity Flow";
+  }, []);
+
   const words = ["Terhemat", "Tercepat", "Termudah"];
   const [showAllFeatures, setShowAllFeatures] = React.useState(false);
 
@@ -157,7 +161,7 @@ export default function App() {
     <div className="w-full relative">
       <div className="aurora-bg"></div>
       {/* Hero Section */}
-      <section className="h-auto py-24 md:py-40 flex flex-col justify-center max-w-7xl mx-auto px-6 text-center relative">
+      <section className="h-auto pt-24 pb-24 md:pt-36 md:pb-36 flex flex-col justify-center max-w-7xl mx-auto px-6 text-center relative">
         <AnimatedContainer>
           <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[1.05] text-theme-main">
             Temukan Rute <br className="hidden sm:block" />
@@ -171,7 +175,7 @@ export default function App() {
               href="#features" 
               className="w-full sm:w-auto bg-theme-accent text-theme-inverted px-10 py-5 rounded-2xl text-lg font-bold hover:bg-[#00e685] transition-all hover:scale-105 shadow-xl shadow-theme-accent/20 flex items-center justify-center gap-2 shimmer-btn"
             >
-              Gunakan Dity Flow Sekarang
+              Coba Sekarang
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
             </a>
           </div>
@@ -295,47 +299,7 @@ export default function App() {
       </section>
 
       {/* Footer */}
-      <Footer
-        logo={
-          <div className="w-8 h-8 bg-theme-accent rounded-lg flex items-center justify-center text-white dark:text-black shadow-lg shadow-theme-accent/20">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        }
-        brandName="Dity Flow"
-        socialLinks={[
-          {
-            icon: <Twitter className="h-5 w-5" />,
-            href: "https://twitter.com",
-            label: "Twitter",
-          },
-          {
-            icon: <Instagram className="h-5 w-5" />,
-            href: "https://instagram.com",
-            label: "Instagram",
-          },
-          {
-            icon: <Github className="h-5 w-5" />,
-            href: "https://github.com",
-            label: "GitHub",
-          },
-        ]}
-        mainLinks={[
-          { href: "/app/", label: "Optimizer Transfer" },
-          { href: "/#features", label: "Optimizer Tagihan" },
-          { href: "/#features", label: "Optimizer Tarik Tunai" },
-          { href: "/#features", label: "Split-Bill Router" },
-          { href: "/#features", label: "E-Commerce Route" },
-          { href: "/#features", label: "Global Flow" },
-        ]}
-        legalLinks={[
-          { href: "#", label: "Kebijakan Privasi" },
-          { href: "#", label: "Syarat & Ketentuan" },
-          { href: "#", label: "Pusat Bantuan" },
-        ]}
-        copyright={{
-          text: "© 2026 Dity Flow. Hak cipta dilindungi.",
-        }}
-      />
+      <Footer />
     </div>
   );
 }
@@ -349,8 +313,8 @@ function FAQAccordion() {
       answer: "Dity Flow adalah asisten keuangan cerdas yang membantu Anda menemukan rute transaksi (transfer, pembayaran tagihan, dll) paling efisien dan murah melalui algoritma pemetaan jalur yang canggih."
     },
     {
-      question: "Bagaimana cara kerja Optimizer Transfer?",
-      answer: "Sistem kami memetakan berbagai jalur transfer antar bank dan e-wallet, termasuk penggunaan perantara yang legal dan gratis, untuk memberikan Anda opsi biaya admin terendah (seringkali Rp0)."
+      question: "Apakah aplikasi ini bisa terhubung langsung dengan rekening saya?",
+      answer: "Tidak. Dity Flow menjunjung tinggi privasi dan keamanan Anda (Zero Financial Access). Kami murni bertindak sebagai penyedia informasi rute. Segala transaksi tetap Anda lakukan sendiri secara aman melalui aplikasi m-banking atau e-wallet resmi milik Anda."
     },
     {
       question: "Apakah Dity Flow aman digunakan?",
@@ -399,11 +363,11 @@ function FAQItem({
     <div className={cn("border rounded-2xl transition-all duration-300", isOpen ? "border-theme-accent bg-theme-accent/[0.02]" : "border-theme-border bg-theme-bg")}>
       <button 
         onClick={onToggle}
-        className="w-full p-6 text-left flex items-center justify-between transition-colors"
+        className="w-full p-6 text-left flex items-start sm:items-center justify-between transition-colors"
       >
-        <span className={cn("font-bold text-lg pr-8 transition-colors", isOpen ? "text-theme-accent" : "text-theme-main")}>{question}</span>
+        <span className={cn("font-bold text-lg pr-4 sm:pr-8 transition-colors", isOpen ? "text-theme-accent" : "text-theme-main")}>{question}</span>
         <svg 
-          className={cn("w-5 h-5 text-theme-accent transition-transform duration-300", isOpen && "rotate-180")} 
+          className={cn("w-5 h-5 shrink-0 mt-1 sm:mt-0 text-theme-accent transition-transform duration-300", isOpen && "rotate-180")} 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"

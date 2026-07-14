@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+  <link rel="preload" as="image" href="/assets/logo-green.svg" />
+  <link rel="preload" as="image" href="/assets/logo-white.svg" />
 
   <!-- Content Security Policy (CSP) untuk pertahanan XSS & Data Injection -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://msvsqebpidhftdqplclx.supabase.co https://*.run.app; img-src 'self' data: https: referrer; frame-ancestors 'self' https://*.google.com https://*.run.app https://ai.studio;">
@@ -19,14 +22,14 @@
   <meta property="og:url" content="https://dityflow.com">
   <meta property="og:title" content="Dity Flow - Rute Transfer Hemat & Bebas Biaya Admin">
   <meta property="og:description" content="Navigasikan rute transfer uang antarbank terhemat Anda secara cerdas. Hemat 100% biaya admin secara instan dengan algoritma optimasi rute Dity Flow.">
-  <meta property="og:image" content="https://ais-pre-bxqhiikplrqdbrnnj4rcpq-915966461271.asia-southeast1.run.app/assets/og-image.png">
+  <meta property="og:image" content="/assets/og-image.png">
 
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://dityflow.com">
   <meta name="twitter:title" content="Dity Flow - Navigasi Rute Transfer Bebas Biaya Admin">
   <meta name="twitter:description" content="Kalkulasi rute transaksi keuangan terbaik dan hindari biaya transfer antar bank/e-wallet berlebih menggunakan rute optimal Dity Flow.">
-  <meta name="twitter:image" content="https://ais-pre-bxqhiikplrqdbrnnj4rcpq-915966461271.asia-southeast1.run.app/assets/og-image.png">
+  <meta name="twitter:image" content="/assets/og-image.png">
 
   <!-- JSON-LD Structured Data (Schema.org WebApplication) -->
   <script type="application/ld+json">
@@ -49,12 +52,29 @@
 
   <script>
     (function() {
-      const theme = localStorage.getItem('theme') || 'dark';
-      if (theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
+      function updateFavicon(isDark) {
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (favicon) {
+          if (isDark) {
+            favicon.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="3" y="3" width="94" height="94" rx="28" fill="%23121214" stroke="%23242426" stroke-width="6"/><path d="M 34,28 L 12,50 L 34,72 M 46,28 L 68,50 L 46,72 M 66,28 L 88,50 L 66,72" fill="none" stroke="%2300ba68" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+          } else {
+            favicon.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" rx="28" fill="%2300ba68"/><path d="M 34,28 L 12,50 L 34,72 M 46,28 L 68,50 L 46,72 M 66,28 L 88,50 L 66,72" fill="none" stroke="%23ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+          }
+        }
       }
+      const theme = localStorage.getItem('theme') || 'dark';
+      const isDark = theme === 'dark';
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => updateFavicon(isDark));
+      } else {
+        updateFavicon(isDark);
+      }
+      window.__updateFavicon = updateFavicon;
     })();
   </script>
   <script src="https://cdn.tailwindcss.com"></script>

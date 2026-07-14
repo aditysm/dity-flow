@@ -15,19 +15,34 @@ export function Navbar() {
     setIsDark(newIsDark);
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
     
+    if (typeof (window as any).__updateFavicon === 'function') {
+      (window as any).__updateFavicon(newIsDark);
+    }
+    
     if (typeof (window as any).toggleTheme === 'function') {
       (window as any).toggleTheme();
+    }
+  };
+
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const isHome = window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname.endsWith('/');
+    if (isHome) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   return (
     <nav className="border-b border-theme-border bg-theme-bg/90 backdrop-blur-md sticky top-0 z-50 transition-colors duration-300 w-full">
       <div className="max-w-7xl mx-auto px-6 h-[3.5rem] md:h-[4rem] flex items-center justify-between">
-        <a href="/" className="text-xl md:text-2xl font-extrabold tracking-tighter flex items-center gap-2 text-theme-main hover:opacity-90 transition-opacity">
-          <div className="w-8 h-8 bg-theme-accent rounded-xl flex items-center justify-center text-theme-inverted shadow-lg shadow-theme-accent/20">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+        <a href="/" onClick={handleLogoClick} className="text-xl md:text-2xl font-extrabold tracking-tighter flex items-center gap-2 text-theme-main hover:opacity-90 transition-opacity">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg overflow-hidden p-1.5 ${isDark ? 'bg-[#121214] border border-[#242426] shadow-black/40' : 'bg-[#00ba68] shadow-[#00ba68]/20'}`}>
+            <img 
+              src={isDark ? "/assets/logo-green.svg" : "/assets/logo-white.svg"} 
+              alt="Dity Flow Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           Dity Flow
         </a>
