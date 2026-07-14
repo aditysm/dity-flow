@@ -25,7 +25,10 @@ export function Navbar() {
   };
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    const isHome = window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname.endsWith('/');
+    const path = window.location.pathname;
+    const isSubPage = path.includes('/app') || path.includes('/help') || path.includes('/privacy') || path.includes('/terms');
+    const isHome = !isSubPage;
+
     if (isHome) {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
