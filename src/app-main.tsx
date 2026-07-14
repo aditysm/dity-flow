@@ -1462,6 +1462,8 @@ function AppMain() {
                     <span className="text-theme-main opacity-40 text-base sm:text-[0.9375rem] font-bold">Rp</span>
                     <input 
                       type="text" 
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={amountStr}
                       onChange={handleAmountChange}
                       required 
