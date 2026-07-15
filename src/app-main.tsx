@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { createRoot } from "react-dom/client";
 import { 
   ReactFlow, 
   Controls, 
@@ -10,7 +9,8 @@ import {
   Handle, 
   Position, 
   EdgeLabelRenderer, 
-  getBezierPath, 
+  getSmoothStepPath, 
+  BaseEdge,
   type EdgeProps,
   ReactFlowProvider,
   useReactFlow
@@ -28,6 +28,7 @@ import {
   ChevronRight, 
   AlertCircle, 
   Check, 
+  WifiOff, 
   X, 
   Loader2, 
   Printer, 
@@ -46,7 +47,6 @@ import {
   ZoomIn,
   ZoomOut
 } from "lucide-react";
-import { Navbar } from "@/src/components/ui/navbar";
 import { Footer } from "@/src/components/ui/footer";
 import { Instagram, Mail, MessageCircle } from "lucide-react";
 
@@ -80,17 +80,17 @@ function InstitutionNode({ data }: any) {
   const isHorizontal = orientation === "horizontal";
 
   // Compute borders and background based on selected state
-  let borderColor = isLast ? accentColor : `${accentColor}40`;
-  let shadow = isLast ? `0 4px 14px -3px ${accentColor}40` : "none";
-  let textColor = isLast ? accentColor : "var(--color-text-main)";
+  let borderColor = isLast ? "var(--color-accent)" : "rgba(var(--color-accent-rgb, 0, 186, 104), 0.25)";
+  let shadow = isLast ? `0 4px 14px -3px rgba(var(--color-accent-rgb, 0, 186, 104), 0.25)` : "none";
+  let textColor = isLast ? "var(--color-accent)" : "var(--color-text-main)";
 
   if (isAnySelected) {
     if (isNodeSelected) {
-      borderColor = accentColor;
-      shadow = `0 0 0 2px var(--color-bg), 0 0 0 4px ${accentColor}, 0 0 18px ${accentColor}80`;
-      textColor = accentColor;
+      borderColor = "var(--color-accent)";
+      shadow = `0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent), 0 0 18px rgba(var(--color-accent-rgb, 0, 186, 104), 0.5)`;
+      textColor = "var(--color-accent)";
     } else {
-      borderColor = `${accentColor}40`;
+      borderColor = "rgba(var(--color-accent-rgb, 0, 186, 104), 0.15)";
       shadow = "none";
       textColor = "var(--color-text-main)";
     }
@@ -111,7 +111,7 @@ function InstitutionNode({ data }: any) {
           type="target"
           position={isHorizontal ? Position.Left : Position.Top}
           style={{ 
-            background: isAnySelected ? accentColor : "var(--color-border)", 
+            background: isAnySelected ? (isNodeSelected ? "var(--color-accent)" : "var(--color-app-border)") : "var(--color-app-border)", 
             width: 8, 
             height: 8, 
             border: "none",
@@ -125,7 +125,7 @@ function InstitutionNode({ data }: any) {
           type="source"
           position={isHorizontal ? Position.Right : Position.Bottom}
           style={{ 
-            background: isAnySelected ? accentColor : "var(--color-border)", 
+            background: isAnySelected ? (isNodeSelected ? "var(--color-accent)" : "var(--color-app-border)") : "var(--color-app-border)", 
             width: 8, 
             height: 8, 
             border: "none",
@@ -150,13 +150,14 @@ function StepEdge({
   markerEnd,
   data,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 16,
   });
 
   const { fee_cost, step_notes, accentColor, badgeBgColor, isSelected, isAnySelected, onSelect } = (data || {}) as any;
@@ -165,17 +166,16 @@ function StepEdge({
 
   return (
     <>
-      <path
+      <BaseEdge
         id={id}
-        style={{ 
-          stroke: "var(--color-border)", 
-          strokeWidth: 2,
-          ...style 
-        }}
-        className="react-flow__edge-path cursor-pointer"
-        d={edgePath}
+        path={edgePath}
         markerEnd={markerEnd}
-        onClick={onSelect}
+        style={{ 
+          stroke: isAnySelected && isSelected ? "var(--color-accent)" : "var(--color-app-border)", 
+          strokeWidth: isAnySelected && isSelected ? 3 : 2,
+          opacity: isAnySelected ? (isSelected ? 1 : 0.4) : 1,
+          ...style
+        }}
       />
       <EdgeLabelRenderer>
         <div
@@ -499,16 +499,34 @@ function FlowContainer({
       try {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen();
         }
       } catch (err) {
         console.error("Failed to exit fullscreen", err);
         setIsFullscreen(false);
       }
     }
+  };
+
+  const handleFitView = () => {
+    if (routeData && routeData.length > 0) {
+      const institutionsList = [routeData[0].from_institution];
+      routeData.forEach((step) => {
+        institutionsList.push(step.to_institution);
+      });
+
+      const resetNodes = nodes.map((node, idx) => {
+        const isHorizontal = orientation === "horizontal";
+        const position = isHorizontal 
+          ? { x: idx * 280 + 40, y: 140 } 
+          : { x: 140, y: idx * 180 + 40 };
+        return { ...node, position };
+      });
+      setNodes(resetNodes);
+    }
+    
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 0 });
+    }, 100);
   };
 
   const { zoomIn, zoomOut } = useReactFlow();
@@ -520,8 +538,8 @@ function FlowContainer({
   // Re-fit view when fullscreen mode is toggled
   useEffect(() => {
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 400 });
-    }, 150);
+      fitView({ padding: 0.2, duration: 0 });
+    }, 50);
   }, [isFullscreen, fitView]);
 
   const handleOpenPreview = async () => {
@@ -583,6 +601,7 @@ function FlowContainer({
       const dataUrl = await toPng(container, {
         backgroundColor: isDark ? "#050505" : "#f8fafc",
         pixelRatio: 2.5,
+        skipFonts: true,
         filter: (element) => {
           if (!element || !(element instanceof Element)) return true;
           return !(element.hasAttribute("data-html2canvas-ignore") || 
@@ -596,7 +615,7 @@ function FlowContainer({
       if (watermark) watermark.classList.add("hidden");
 
       // Restore clean view layout after screenshot is captured
-      fitView({ padding: 0.2, duration: 300 });
+      fitView({ padding: 0.2, duration: 0 });
 
       setPreviewImageSrc(dataUrl);
     } catch (err) {
@@ -623,7 +642,7 @@ function FlowContainer({
   useEffect(() => {
     if (routeData && routeData.length > 0) {
       setTimeout(() => {
-        fitView({ padding: 0.2, duration: 600 });
+        fitView({ padding: 0.2, duration: 0 });
       }, 100);
     }
   }, [routeData, orientation, fitView]);
@@ -697,22 +716,22 @@ function FlowContainer({
           },
           style: {
             stroke: isAnySelected 
-              ? (isSelected ? accentColor : "var(--color-border)") 
-              : "var(--color-border)",
+              ? (isSelected ? "var(--color-accent)" : "var(--color-app-border)") 
+              : "var(--color-app-border)",
             strokeWidth: isAnySelected ? (isSelected ? 5 : 2) : 2,
             filter: isAnySelected && isSelected 
-              ? `drop-shadow(0px 0px 6px ${accentColor})` 
+              ? `drop-shadow(0px 0px 6px var(--color-accent))` 
               : "none",
             transition: "all 0.3s ease",
             opacity: isAnySelected ? (isSelected ? 1 : 0.4) : 1,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            width: 20,
-            height: 20,
+            width: 16,
+            height: 16,
             color: isAnySelected 
-              ? (isSelected ? accentColor : "var(--color-border)") 
-              : "var(--color-border)",
+              ? (isSelected ? "var(--color-accent)" : "var(--color-app-border)") 
+              : "var(--color-app-border)",
           },
         };
       });
@@ -875,6 +894,7 @@ function FlowContainer({
           <ReactFlow
             nodes={nodes}
             edges={edges}
+            defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}
@@ -919,7 +939,7 @@ function FlowContainer({
               </button>
               <button
                 type="button"
-                onClick={() => fitView({ padding: 0.2, duration: 400 })}
+                onClick={handleFitView}
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-theme-card border border-theme-border rounded-xl shadow-md flex items-center justify-center text-theme-textDim hover:text-theme-main hover:border-theme-accent transition-all group relative cursor-pointer"
               >
                 <Scan className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -939,8 +959,8 @@ function FlowContainer({
 
           {/* Watermark inside the sandbox, visible on export PNG only */}
           <div 
-            className="export-watermark absolute bottom-4 right-4 text-theme-textDim/50 text-[10px] sm:text-[11px] font-extrabold tracking-widest font-mono uppercase select-none pointer-events-none hidden"
-            style={{ zIndex: 10 }}
+            className="export-watermark absolute top-2 right-2 text-theme-textDim/30 text-[9px] font-bold tracking-widest font-mono uppercase select-none pointer-events-none hidden"
+            style={{ zIndex: 10, maxWidth: '150px', textAlign: 'right' }}
           >
             Generated by Dity Flow - {window.location.host}
           </div>
@@ -1069,7 +1089,7 @@ function FlowContainer({
 }
 
 // Global Main Page Component
-function AppMain() {
+export default function AppMain() {
   const [isDark, setIsDark] = useState(document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
@@ -1098,8 +1118,10 @@ function AppMain() {
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [cacheNotice, setCacheNotice] = useState("");
   const [routeData, setRouteData] = useState<Step[]>([]);
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
+  const [lastSearchParams, setLastSearchParams] = useState<{src: string, dst: string, amount: number, bypass: boolean} | null>(null);
 
   // Config options matching original
   const [flowTheme, setFlowTheme] = useState<"default" | "ocean" | "vibrant">("default");
@@ -1232,8 +1254,36 @@ function AppMain() {
     handleSearch(sourceId, destId, amountVal, bypassQuota);
   };
 
+  const saveSearchToCache = (src: string, dst: string, amount: number, bypass: boolean, data: any) => {
+    try {
+      const cachedStr = localStorage.getItem("dityFlowCachedSearchResults");
+      let cache: any[] = [];
+      if (cachedStr) {
+        cache = JSON.parse(cachedStr);
+      }
+      
+      const newItem = {
+        src,
+        dst,
+        amount,
+        bypass,
+        data,
+        timestamp: Date.now()
+      };
+      
+      let updated = [newItem, ...cache.filter((item: any) => !(item.src === src && item.dst === dst && item.amount === amount && item.bypass === bypass))];
+      if (updated.length > 5) {
+        updated = updated.slice(0, 5);
+      }
+      localStorage.setItem("dityFlowCachedSearchResults", JSON.stringify(updated));
+    } catch (e) {
+      console.error("Error saving search to cache", e);
+    }
+  };
+
   const handleSearch = async (src: string, dst: string, amount: number, bypass: boolean) => {
     setErrorMsg("");
+    setCacheNotice("");
     setLoading(true);
     setLoadingMsg("Menganalisis rute terhemat...");
     setRouteData([]);
@@ -1260,6 +1310,8 @@ function AppMain() {
       } else {
         setRouteData(data);
         saveSearch(src, dst, amount, bypass);
+        saveSearchToCache(src, dst, amount, bypass, data);
+        setLastSearchParams({ src, dst, amount, bypass });
 
         // Update URL query params cleanly for sharing
         const url = new URL(window.location.href);
@@ -1275,6 +1327,39 @@ function AppMain() {
       }
     } catch (err: any) {
       console.error(err);
+      
+      // Try to load from localStorage cache
+      const cachedStr = localStorage.getItem("dityFlowCachedSearchResults");
+      if (cachedStr) {
+        try {
+          const cache = JSON.parse(cachedStr);
+          const cachedItem = cache.find((item: any) => 
+            item.src === src && 
+            item.dst === dst && 
+            item.amount === amount && 
+            item.bypass === bypass
+          );
+          if (cachedItem) {
+            setRouteData(cachedItem.data);
+            setLastSearchParams({ src, dst, amount, bypass });
+            setCacheNotice("Koneksi bermasalah atau offline. Menampilkan rute hasil pencarian teroptimasi dari cache lokal.");
+            
+            const url = new URL(window.location.href);
+            url.searchParams.set("source", src);
+            url.searchParams.set("dest", dst);
+            url.searchParams.set("amount", amount.toString());
+            if (bypass) {
+              url.searchParams.set("bypass", "true");
+            } else {
+              url.searchParams.delete("bypass");
+            }
+            window.history.pushState({}, "", url.toString());
+            return;
+          }
+        } catch (e) {
+          console.error("Error reading cache", e);
+        }
+      }
       setErrorMsg("Terjadi kegagalan komunikasi dengan basis data rute. Silakan coba sesaat lagi.");
     } finally {
       setLoading(false);
@@ -1325,6 +1410,7 @@ function AppMain() {
     setAmountStr("");
     setBypassQuota(false);
     setRouteData([]);
+    setLastSearchParams(null);
     setErrorMsg("");
     
     // Clear URL search params
@@ -1362,8 +1448,22 @@ function AppMain() {
 
   return (
     <div className="flex-1 flex flex-col w-full min-h-screen relative">
-      <div className="aurora-bg"></div>
       {/* Alert Notification */}
+      {cacheNotice && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 transition-all duration-300 animate-bounce">
+          <div className="bg-theme-card border border-emerald-500/50 text-emerald-200 p-4 rounded-2xl shadow-2xl flex items-start gap-3 backdrop-blur-md">
+            <WifiOff className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5 animate-pulse" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-emerald-400">Mode Cache Offline</h4>
+              <p className="text-sm mt-0.5 opacity-90 leading-relaxed">{cacheNotice}</p>
+            </div>
+            <button onClick={() => setCacheNotice("")} className="text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {errorMsg && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 transition-all duration-300 animate-bounce">
           <div className="bg-theme-card border border-rose-500/50 text-rose-200 p-4 rounded-2xl shadow-2xl flex items-start gap-3 backdrop-blur-md">
@@ -1390,8 +1490,6 @@ function AppMain() {
           </p>
         </div>
       )}
-
-      <Navbar />
 
       <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -1510,7 +1608,16 @@ function AppMain() {
                 <div className="pt-4 lg:pt-6">
                   <button 
                     type="submit" 
-                    disabled={!sourceId || !destId || amountVal <= 0}
+                    disabled={
+                      !sourceId || 
+                      !destId || 
+                      amountVal <= 0 || 
+                      (lastSearchParams && 
+                        sourceId === lastSearchParams.src && 
+                        destId === lastSearchParams.dst && 
+                        amountVal === lastSearchParams.amount && 
+                        bypassQuota === lastSearchParams.bypass)
+                    }
                     className="w-full py-4 px-4 bg-theme-accent text-theme-inverted font-extrabold rounded-xl text-base hover:opacity-90 transition-opacity flex justify-center items-center gap-2 shimmer-btn cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                   >
                     Cari Rute Hemat
@@ -1788,9 +1895,4 @@ function AppMain() {
       <Footer />
     </div>
   );
-}
-
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(<AppMain />);
 }

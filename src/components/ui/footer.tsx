@@ -1,6 +1,7 @@
 import { Button } from "@/src/components/ui/button"
 import React from "react"
 import { Instagram, Mail } from "lucide-react"
+import { Link } from "react-router-dom"
 
 interface FooterProps {
   logo?: React.ReactNode
@@ -13,6 +14,7 @@ interface FooterProps {
   mainLinks?: Array<{
     href: string
     label: string
+    active?: boolean
   }>
   legalLinks?: Array<{
     href: string
@@ -25,22 +27,7 @@ interface FooterProps {
 }
 
 export function Footer({
-  logo = (
-    <div className="flex items-center justify-center bg-[#00ba68] dark:bg-[#121214] dark:border dark:border-[#242426] rounded-xl w-10 h-10 shadow-lg shadow-[#00ba68]/20 dark:shadow-black/40 transition-all overflow-hidden p-2">
-      <img 
-        src="/assets/logo-white.svg" 
-        alt="Dity Flow Logo" 
-        className="w-full h-full object-contain dark:hidden"
-        referrerPolicy="no-referrer"
-      />
-      <img 
-        src="/assets/logo-green.svg" 
-        alt="Dity Flow Logo" 
-        className="w-full h-full object-contain hidden dark:block"
-        referrerPolicy="no-referrer"
-      />
-    </div>
-  ),
+  logo,
   brandName = "Dity Flow",
   socialLinks = [
     {
@@ -60,34 +47,59 @@ export function Footer({
     },
   ],
   mainLinks = [
-    { href: "/optimizer-transfer/", label: "Optimizer Transfer" },
-    { href: "/#features", label: "Optimizer Tagihan" },
-    { href: "/#features", label: "Optimizer Tarik Tunai" },
-    { href: "/#features", label: "Split-Bill Router" },
-    { href: "/#features", label: "E-Commerce Route" },
-    { href: "/#features", label: "Global Flow" },
+    { href: "/optimizer-transfer", label: "Optimizer Transfer", active: true },
+    { href: "/#features", label: "Optimizer Tagihan", active: false },
+    { href: "/#features", label: "Optimizer Tarik Tunai", active: false },
+    { href: "/#features", label: "Split-Bill Router", active: false },
+    { href: "/#features", label: "E-Commerce Route", active: false },
+    { href: "/#features", label: "Global Flow", active: false },
   ],
   legalLinks = [
-    { href: "/privacy/", label: "Kebijakan Privasi" },
-    { href: "/terms/", label: "Syarat & Ketentuan" },
-    { href: "/help/", label: "Pusat Bantuan" },
+    { href: "/privacy", label: "Kebijakan Privasi" },
+    { href: "/terms", label: "Syarat & Ketentuan" },
+    { href: "/help", label: "Pusat Bantuan" },
   ],
   copyright = {
     text: "© 2026 Dity Flow. Hak cipta dilindungi.",
   },
 }: FooterProps = {}) {
+  const [isDark, setIsDark] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    checkTheme();
+    
+    // Create an observer to watch for class changes on html element
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  const defaultLogo = (
+    <div className={`flex items-center justify-center rounded-xl w-10 h-10 shadow-lg transition-all overflow-hidden p-2 ${isDark ? 'bg-[#121214] border border-[#242426] shadow-black/40' : 'bg-[#00ba68] shadow-[#00ba68]/20'}`}>
+      <img 
+        src={isDark ? "/assets/logo-green.svg" : "/assets/logo-white.svg"} 
+        alt="Dity Flow Logo" 
+        className="w-full h-full object-contain"
+        referrerPolicy="no-referrer"
+      />
+    </div>
+  );
   return (
     <footer className="pb-12 pt-24 border-t border-theme-border bg-theme-bg">
       <div className="max-w-7xl mx-auto px-6">
         <div className="md:flex md:items-start md:justify-between">
-          <a
-            href="/"
+          <Link
+            to="/"
             className="flex items-center gap-x-2 text-theme-main hover:opacity-90 transition-opacity"
             aria-label={brandName}
           >
-            {logo}
+            {logo || defaultLogo}
             <span className="font-black text-2xl tracking-tighter">{brandName}</span>
-          </a>
+          </Link>
           <ul className="flex list-none mt-8 md:mt-0 gap-3">
             {socialLinks.map((link, i) => (
               <li key={i}>
@@ -106,39 +118,61 @@ export function Footer({
           </ul>
         </div>
         
-        <div className="border-t border-theme-border mt-12 pt-12 lg:grid lg:grid-cols-10 gap-8">
-          <nav className="lg:mt-0 lg:col-[4/11]">
-            <ul className="list-none flex flex-wrap -my-2 -mx-4 lg:justify-end">
-              {mainLinks.map((link, i) => (
-                <li key={i} className="my-2 mx-4 shrink-0">
-                  <a
-                    href={link.href}
-                    className="text-sm font-medium text-theme-textDim hover:text-theme-main transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          
-          <div className="mt-8 lg:mt-0 lg:col-[4/11]">
-            <ul className="list-none flex flex-wrap -my-2 -mx-4 lg:justify-end">
-              {legalLinks.map((link, i) => (
-                <li key={i} className="my-2 mx-4 shrink-0">
-                  <a
-                    href={link.href}
-                    className="text-sm text-theme-textDim hover:text-theme-main transition-colors font-medium opacity-70"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div className="mt-12 text-sm leading-6 text-theme-textDim lg:mt-0 lg:row-[1/3] lg:col-[1/4] font-medium">
-            <div>{copyright.text}</div>
+        <div className="border-t border-theme-border mt-12 pt-12">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-12">
+            {/* Main Links Section */}
+            <div className="flex-1 max-w-3xl">
+              <nav aria-label="Main navigation">
+                <ul className="list-none grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-8">
+                  {mainLinks.map((link: any, i) => (
+                    <li key={i} className="shrink-0">
+                      {link.active === false ? (
+                        <span className="text-sm font-medium text-theme-textDim cursor-default opacity-40 select-none">
+                          {link.label}
+                        </span>
+                      ) : link.href.startsWith("http") ? (
+                        <a
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-theme-textDim hover:text-theme-main transition-colors"
+                        >
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link
+                          to={link.href}
+                          className="text-sm font-medium text-theme-textDim hover:text-theme-main transition-colors"
+                        >
+                          {link.label}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </div>
+
+            {/* Legal and Copyright Section */}
+            <div className="flex flex-col gap-8 lg:items-end lg:text-right border-t lg:border-t-0 border-theme-border/30 pt-8 lg:pt-0">
+              <nav aria-label="Legal navigation">
+                <ul className="list-none flex flex-wrap gap-x-8 gap-y-4 lg:justify-end">
+                  {legalLinks.map((link, i) => (
+                    <li key={i}>
+                      <Link
+                        to={link.href}
+                        className="text-sm font-medium text-theme-textDim hover:text-theme-main transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <div className="text-sm text-theme-textDim opacity-50 font-medium">
+                &copy; {new Date().getFullYear()} Dity Flow. Hak cipta dilindungi.
+              </div>
+            </div>
           </div>
         </div>
       </div>

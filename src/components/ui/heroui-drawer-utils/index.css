@@ -1,0 +1,14 @@
+/* HeroUI Drawer Styles */
+.heroui-drawer-backdrop,
+[data-slot="drawer-backdrop"] {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+}
+
+.dark .heroui-drawer-backdrop,
+.dark [data-slot="drawer-backdrop"] {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+}

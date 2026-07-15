@@ -1,6 +1,4 @@
 import React, { useEffect } from "react";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
 import { Footer } from "../components/ui/footer";
 import "../index.css";
 
@@ -11,7 +9,6 @@ export function TermsOfService() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="aurora-bg"></div>
       <main className="flex-1 max-w-4xl mx-auto px-6 pt-6 pb-12 md:pt-10 md:pb-24 w-full relative z-10">
         <div className="mb-12">
           <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-theme-main mb-4">
@@ -111,14 +108,5 @@ export function TermsOfService() {
       </main>
       <Footer />
     </div>
-  );
-}
-
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <TermsOfService />
-    </StrictMode>
   );
 }

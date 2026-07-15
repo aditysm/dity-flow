@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/src/lib/utils";
 import { FlipWords } from "@/src/components/ui/flip-words";
 import { FeatureCard } from "@/src/components/ui/grid-feature-cards";
@@ -159,9 +160,8 @@ export default function App() {
 
   return (
     <div className="w-full relative">
-      <div className="aurora-bg"></div>
       {/* Hero Section */}
-      <section className="h-auto pt-24 pb-24 md:pt-36 md:pb-36 flex flex-col justify-center max-w-7xl mx-auto px-6 text-center relative">
+      <section id="hero" className="min-h-screen pt-24 pb-24 md:pt-36 md:pb-36 flex flex-col justify-center max-w-7xl mx-auto px-6 text-center relative">
         <AnimatedContainer>
           <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-8 leading-[1.05] text-theme-main">
             Temukan Rute <br className="hidden sm:block" />
@@ -173,6 +173,13 @@ export default function App() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a 
               href="#features" 
+              onClick={(e) => {
+                e.preventDefault();
+                const element = document.getElementById("features");
+                if (element) {
+                  element.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
               className="w-full sm:w-auto bg-theme-accent text-theme-inverted px-10 py-5 rounded-2xl text-lg font-bold hover:bg-[#00e685] transition-all hover:scale-105 shadow-xl shadow-theme-accent/20 flex items-center justify-center gap-2 shimmer-btn"
             >
               Coba Sekarang
@@ -183,7 +190,7 @@ export default function App() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 md:py-32 bg-theme-bg border-t border-theme-border overflow-hidden">
+      <section id="features" className="min-h-screen flex flex-col justify-center pt-24 pb-12 bg-theme-bg border-t border-theme-border overflow-hidden">
         <div className="mx-auto w-full max-w-7xl px-6">
           <AnimatedContainer className="text-center mb-20">
             <h2 className="text-3xl md:text-5xl font-bold tracking-tighter text-theme-main mb-6">
@@ -207,21 +214,18 @@ export default function App() {
                 const visibilityClass = isHiddenOnMobile ? "hidden sm:block" : "block";
 
                 return feature.active ? (
-                  <a key={i} href="/optimizer-transfer/" className={cn("h-full", visibilityClass)}>
+                  <Link key={i} to="/optimizer-transfer" className={cn("h-full", visibilityClass)}>
                     <FeatureCard 
                       feature={feature} 
                       className="h-full border-none"
                     />
-                  </a>
+                  </Link>
                 ) : (
                   <div key={i} className={cn("relative group h-full", visibilityClass)}>
                     <FeatureCard 
                       feature={feature} 
                       className="h-full opacity-50 border-none"
                     />
-                    <div className="absolute top-4 right-4">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-theme-textDim bg-theme-border px-2 py-1 rounded-md">SEGERA HADIR</span>
-                    </div>
                   </div>
                 );
               })}
@@ -254,7 +258,7 @@ export default function App() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 md:py-32 bg-theme-bg border-t border-theme-border relative overflow-hidden">
+      <section id="testimonials" className="min-h-screen flex flex-col justify-center pt-12 pb-24 bg-theme-bg border-t border-theme-border relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <AnimatedContainer className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold tracking-tighter text-theme-main mb-6">
@@ -274,7 +278,7 @@ export default function App() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-24 md:py-32 bg-gradient-to-b from-theme-bg to-theme-card border-t border-theme-border">
+      <section id="faq" className="min-h-screen flex flex-col justify-center py-24 bg-gradient-to-b from-theme-bg to-theme-card border-t border-theme-border">
         <div className="max-w-3xl mx-auto px-6">
           <AnimatedContainer className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold tracking-tighter text-theme-main mb-6">
@@ -290,7 +294,7 @@ export default function App() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 md:py-32 bg-theme-bg border-t border-theme-border">
+      <section id="contribute" className="min-h-screen flex flex-col justify-center py-24 bg-theme-bg border-t border-theme-border">
         <div className="max-w-7xl mx-auto px-6">
           <AnimatedContainer>
             <CallToAction />

@@ -1,6 +1,5 @@
 import React from "react";
-import { StrictMode, useState, useMemo } from "react";
-import { createRoot } from "react-dom/client";
+import { useState, useMemo } from "react";
 import { Footer } from "../components/ui/footer";
 import { ChevronDownIcon, MailIcon, Search, X, Send, CheckCircle2 } from "lucide-react";
 import "../index.css";
@@ -162,6 +161,7 @@ export function HelpCenter() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFaqId, setActiveFaqId] = useState<string | null>(null);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
   // Contact Form States
   const [contactName, setContactName] = useState("");
@@ -169,6 +169,7 @@ export function HelpCenter() {
   const [contactSubject, setContactSubject] = useState("");
   const [contactMessage, setContactMessage] = useState("");
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Filter FAQ items dynamically
   const filteredFaqs = useMemo(() => {
@@ -176,9 +177,15 @@ export function HelpCenter() {
     const query = searchQuery.toLowerCase();
     
     return FAQ_DATA.map(category => {
+      const isCategoryMatch = category.category.toLowerCase().includes(query);
       const filteredItems = category.items.filter(item => {
         return item.question.toLowerCase().includes(query);
       });
+
+      if (isCategoryMatch) {
+        return category;
+      }
+      
       return {
         ...category,
         items: filteredItems
@@ -228,9 +235,8 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="aurora-bg"></div>
       <main className="flex-1 max-w-4xl mx-auto px-6 pt-6 pb-12 md:pt-10 md:pb-24 w-full relative z-10">
-        <div className="mb-12 text-center md:text-left">
+        <div className="mb-12 text-left">
           <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-theme-main mb-4">
             Pusat Bantuan & FAQ Dity Flow
           </h1>
@@ -241,18 +247,20 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
 
         {/* Dynamic Search Bar */}
         <div className="mb-12 relative">
-          <div className="relative flex items-center bg-theme-card border border-theme-border rounded-2xl shadow-sm focus-within:border-theme-accent focus-within:ring-2 focus-within:ring-theme-accent/10 transition-all">
+          <div className="relative flex items-center bg-theme-card border border-theme-border rounded-2xl shadow-sm focus-within:border-theme-accent focus-within:ring-2 focus-within:ring-theme-accent/10 transition-all z-20">
             <Search className="w-5 h-5 text-theme-textDim ml-4 shrink-0" />
             <input 
               type="text"
               placeholder="Cari pertanyaan bantuan (contoh: aman, kuota, rute)..."
               value={searchQuery}
+              onFocus={() => setIsSearchDropdownOpen(true)}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
+                setIsSearchDropdownOpen(true);
                 // Reset open accordion when search query changes to keep page focused
                 setActiveFaqId(null);
               }}
-              className="w-full bg-transparent border-none text-theme-main px-4 py-4 focus:outline-none text-sm sm:text-base font-medium placeholder:text-theme-textDim/60"
+              className="w-full bg-transparent border-none text-theme-main px-4 py-4 focus:outline-none text-sm sm:text-base font-medium placeholder:text-theme-textDim/60 placeholder:truncate"
             />
             {searchQuery && (
               <button 
@@ -260,12 +268,58 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                 onClick={() => {
                   setSearchQuery("");
                   setActiveFaqId(null);
+                  setIsSearchDropdownOpen(false);
                 }}
                 className="p-2 mr-2 text-theme-textDim hover:text-theme-main transition-colors"
                 title="Hapus Pencarian"
               >
                 <X className="w-5 h-5" />
               </button>
+            )}
+            
+            {/* Search Suggestions Dropdown */}
+            {isSearchDropdownOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsSearchDropdownOpen(false)}
+                />
+                <div className="absolute left-0 right-0 top-full mt-2 bg-theme-card border border-theme-border rounded-xl shadow-xl overflow-hidden z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-4 py-2 text-[10px] font-bold text-theme-textDim uppercase tracking-widest border-b border-theme-borderDim mb-1">
+                    Kategori Bantuan
+                  </div>
+                  {[
+                    { label: "Keamanan & Privasi (Security First)", value: "Keamanan & Privasi (Security First)" },
+                    { label: "Cara Kerja Navigasi (How It Works)", value: "Cara Kerja Navigasi (How It Works)" },
+                    { label: "Masalah Teknis & Akurasi Data", value: "Masalah Teknis & Akurasi Data" },
+                    { label: "Fitur-fitur Baru Dity Flow", value: "Fitur-fitur Baru Dity Flow" }
+                  ].filter(item => 
+                    item.label.toLowerCase().includes(searchQuery.toLowerCase()) || searchQuery === ""
+                  ).map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(item.label);
+                        setIsSearchDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium text-theme-main hover:bg-theme-accent/5 hover:text-theme-accent transition-colors flex items-center justify-between group"
+                    >
+                      <span>{item.label}</span>
+                      <Search className="w-3.5 h-3.5 opacity-0 group-hover:opacity-40 transition-opacity" />
+                    </button>
+                  ))}
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSearchDropdownOpen(false)}
+                      className="w-full text-left px-4 py-2.5 text-xs font-bold text-theme-accent hover:bg-theme-accent/5 transition-colors mt-1"
+                    >
+                      Cari: "{searchQuery}"
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
           {searchQuery && (
@@ -315,7 +369,7 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-theme-accent/10 border border-theme-accent/20 mb-4">
                   <MailIcon className="w-6 h-6 text-theme-accent" />
                 </div>
-                <h2 className="text-2xl font-bold text-theme-main">Hubungi Dukungan Dity Flow</h2>
+                <h2 className="text-2xl font-bold text-theme-main">Hubungi Dity Flow</h2>
                 <p className="text-theme-textDim text-sm sm:text-base font-medium mt-2">
                   Punya pertanyaan teknis, menemukan bug, atau ingin berkolaborasi? Isi formulir di bawah ini untuk mengirim pesan langsung ke pengembang kami.
                 </p>
@@ -346,7 +400,7 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                       <input 
                         id="contact-name"
                         type="text"
-                        placeholder="Aditya Putra"
+                        placeholder="Nama Anda"
                         required
                         value={contactName}
                         onChange={(e) => setContactName(e.target.value)}
@@ -358,7 +412,7 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                       <input 
                         id="contact-email"
                         type="email"
-                        placeholder="aditya@example.com"
+                        placeholder="email@example.com"
                         required
                         value={contactEmail}
                         onChange={(e) => setContactEmail(e.target.value)}
@@ -367,17 +421,77 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label htmlFor="contact-subject" className="text-xs font-bold text-theme-textDim uppercase tracking-wider block">Subjek / Topik</label>
-                    <input 
-                      id="contact-subject"
-                      type="text"
-                      placeholder="Pertanyaan tentang rute / Kerjasama / Laporan bug"
-                      required
-                      value={contactSubject}
-                      onChange={(e) => setContactSubject(e.target.value)}
-                      className="w-full bg-theme-bg border border-theme-border rounded-xl px-4 py-3 text-sm font-medium text-theme-main placeholder:text-theme-textDim/40 focus:outline-none focus:border-theme-accent focus:ring-1 focus:ring-theme-accent"
-                    />
+                    <div className="relative group">
+                      <input 
+                        id="contact-subject"
+                        type="text"
+                        placeholder="Pilih atau ketik topik pertanyaan..."
+                        required
+                        value={contactSubject}
+                        onChange={(e) => {
+                          setContactSubject(e.target.value);
+                          setIsDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        className="w-full bg-theme-bg border border-theme-border rounded-xl px-4 py-3 text-sm font-medium text-theme-main placeholder:text-theme-textDim/40 focus:outline-none focus:border-theme-accent focus:ring-1 focus:ring-theme-accent pr-10"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-textDim hover:text-theme-accent transition-colors"
+                      >
+                        <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {isDropdownOpen && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setIsDropdownOpen(false)}
+                          />
+                          <div className="absolute left-0 right-0 top-full mt-2 bg-theme-card border border-theme-border rounded-xl shadow-xl overflow-hidden z-20 py-1 animate-in fade-in zoom-in-95 duration-200">
+                            {[
+                              "Pertanyaan tentang rute",
+                              "Masalah teknis aplikasi",
+                              "Saran & Masukan",
+                              "Laporan Bug",
+                              "Kerjasama Strategis",
+                              "Lainnya"
+                            ].filter(topic => 
+                              topic.toLowerCase().includes(contactSubject.toLowerCase()) || contactSubject === ""
+                            ).map((topic) => (
+                              <button
+                                key={topic}
+                                type="button"
+                                onClick={() => {
+                                  setContactSubject(topic);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-sm font-medium text-theme-main hover:bg-theme-accent/5 hover:text-theme-accent transition-colors"
+                              >
+                                {topic}
+                              </button>
+                            ))}
+                            {[
+                              "Pertanyaan tentang rute",
+                              "Masalah teknis aplikasi",
+                              "Saran & Masukan",
+                              "Laporan Bug",
+                              "Kerjasama Strategis",
+                              "Lainnya"
+                            ].filter(topic => 
+                              topic.toLowerCase().includes(contactSubject.toLowerCase()) || contactSubject === ""
+                            ).length === 0 && (
+                              <div className="px-4 py-2.5 text-xs text-theme-textDim font-medium italic">
+                                Tekan enter untuk menggunakan topik ini
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -395,7 +509,8 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
 
                   <button 
                     type="submit"
-                    className="w-full bg-theme-accent hover:opacity-90 active:scale-[0.98] text-theme-inverted font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-theme-accent/10"
+                    disabled={!contactName || !contactEmail || !contactSubject || !contactMessage}
+                    className="w-full bg-theme-accent text-theme-inverted font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-theme-accent/10 shimmer-btn disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                   >
                     <Send className="w-4 h-4" />
                     Kirim Pesan Melalui Email
@@ -403,14 +518,13 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
                 </form>
               )}
 
-              {/* Extra direct contact badges */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 pt-8 border-t border-theme-borderDim text-xs text-theme-textDim font-bold uppercase tracking-wider">
-                <span>Atau kontak langsung:</span>
-                <div className="flex gap-3">
-                  <a href="mailto:dity.store31@gmail.com" className="text-theme-accent hover:underline flex items-center gap-1">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 pt-8 border-t border-theme-borderDim text-xs text-theme-textDim font-bold tracking-wider">
+                <span className="uppercase">Atau kontak langsung:</span>
+                <div className="flex gap-4">
+                  <a href="mailto:dity.store31@gmail.com" className="text-theme-accent hover:underline flex items-center gap-1 normal-case">
                     <MailIcon className="w-3.5 h-3.5" /> dity.store31@gmail.com
                   </a>
-                  <a href="https://wa.me/62895634048237" target="_blank" rel="noopener noreferrer" className="text-theme-accent hover:underline flex items-center gap-1">
+                  <a href="https://wa.me/62895634048237?text=Halo%20Dity%20Flow%2C%20saya%20ingin%20bertanya%20seputar%20layanan%20pusat%20bantuan..." target="_blank" rel="noopener noreferrer" className="text-theme-accent hover:underline flex items-center gap-1 normal-case">
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg> WhatsApp
                   </a>
                 </div>
@@ -421,14 +535,5 @@ Inquiry dikirim melalui formulir bantuan Dity Flow.`;
       </main>
       <Footer />
     </div>
-  );
-}
-
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <HelpCenter />
-    </StrictMode>
   );
 }
