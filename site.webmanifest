@@ -1,0 +1,22 @@
+{
+  "name": "Dity Flow",
+  "short_name": "Dity Flow",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#0F172A",
+  "background_color": "#0F172A",
+  "display": "standalone",
+  "start_url": "/",
+  "description": "Solusi Otomatisasi Alur Kerja & Asisten Digital Bebas Biaya Admin"
+}
