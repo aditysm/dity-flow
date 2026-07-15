@@ -258,7 +258,7 @@ export default function App() {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="min-h-screen flex flex-col justify-center pt-12 pb-24 bg-theme-bg border-t border-theme-border relative overflow-hidden">
+      <section id="testimonials" className="min-h-screen flex flex-col justify-center pt-24 pb-24 bg-theme-bg border-t border-theme-border relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <AnimatedContainer className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-bold tracking-tighter text-theme-main mb-6">

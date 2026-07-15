@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ChevronDown, 
@@ -75,6 +75,7 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setMounted(true);
@@ -129,14 +130,14 @@ export function Navbar() {
         const element = document.getElementById(id);
         if (element) {
           e.preventDefault();
-          // Update URL hash smoothly without default jumping
-          window.history.pushState(null, '', hash);
+          // Update URL hash smoothly using react-router navigation so active states sync
+          navigate(href, { replace: true });
           
           if (id === 'hero') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           } else {
             const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset;
+            const offsetPosition = elementPosition + window.pageYOffset - 80; // Subtract navbar height so section content is never covered
             window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
           }
         }
@@ -265,9 +266,9 @@ export function Navbar() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.15 }}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100000]"
+                  className="fixed inset-0 bg-black/50 z-[100000]"
                 />
               )}
 
@@ -277,8 +278,8 @@ export function Navbar() {
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "100%" }}
-                  transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                  className="fixed right-0 top-0 bottom-0 h-full w-full max-w-[280px] z-[100001] bg-theme-bg/95 backdrop-blur-2xl border-l border-theme-border shadow-2xl flex flex-col overflow-hidden outline-none"
+                  transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
+                  className="fixed right-0 top-0 bottom-0 h-full w-full max-w-[280px] z-[100001] bg-theme-bg border-l border-theme-border shadow-2xl flex flex-col overflow-hidden outline-none"
                 >
                   {/* Ambient Background Accents */}
                   <div className="absolute top-0 right-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
