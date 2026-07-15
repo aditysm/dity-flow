@@ -3,13 +3,13 @@
   "short_name": "Dity Flow",
   "icons": [
     {
-      "src": "/assets/favicon.svg",
+      "src": "/assets/favicon.svg?v=2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/favicon.png",
+      "src": "/assets/favicon.png?v=2",
       "sizes": "512x512",
       "type": "image/png"
     }

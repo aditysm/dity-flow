@@ -76,6 +76,7 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState<string>("hero");
 
   useEffect(() => {
     setMounted(true);
@@ -92,6 +93,49 @@ export function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Highly optimized IntersectionObserver scroll spy to sync active states
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      setActiveSection("");
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const sections = ["hero", "features", "testimonials", "faq", "contribute"];
+    const observers = sections.map((id) => {
+      const element = document.getElementById(id);
+      if (!element) return null;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveSection(id);
+            }
+          });
+        },
+        {
+          rootMargin: "-30% 0px -40% 0px", // Precise middle-screen scanning range
+          threshold: 0
+        }
+      );
+
+      observer.observe(element);
+      return { observer, element };
+    });
+
+    return () => {
+      observers.forEach((obs) => {
+        if (obs) {
+          obs.observer.unobserve(obs.element);
+        }
+      });
+    };
+  }, [location.pathname]);
 
   const handleToggle = () => {
     const html = document.documentElement;
@@ -178,8 +222,8 @@ export function Navbar() {
             const isHome = link.href === '/#hero';
             const linkHash = link.href?.includes('#') ? link.href.substring(link.href.indexOf('#')) : null;
             const isActive = isHome 
-              ? (location.pathname === '/' && (location.hash === '' || location.hash === '#hero' || location.hash === '#')) 
-              : (linkHash && location.hash === linkHash && location.pathname === '/');
+              ? (location.pathname === '/' && (activeSection === 'hero' || activeSection === '')) 
+              : (linkHash && activeSection === linkHash.replace('#', '') && location.pathname === '/');
             
             const isFeatureActive = link.type === "dropdown" && features.some(f => location.pathname === f.href);
             
@@ -257,184 +301,156 @@ export function Navbar() {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Custom Animated Drawer using Framer Motion (Portaled to document.body for flawless z-index stacking context) */}
+          {/* Pure, lightweight CSS-animated Drawer (Portaled to document.body for flawless z-index stacking context) */}
           {mounted && typeof document !== "undefined" && createPortal(
-            <AnimatePresence>
-              {isMobileMenuOpen && (
-                <motion.div
-                  key="mobile-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="fixed inset-0 bg-black/50 z-[100000]"
-                />
-              )}
+            <div className={`fixed inset-0 z-[100000] ${isMobileMenuOpen ? "visible" : "invisible"}`}>
+              {/* Backdrop */}
+              <div 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`fixed inset-0 bg-black/50 transition-opacity duration-200 ${isMobileMenuOpen ? "opacity-100" : "opacity-0"}`}
+              />
 
-              {isMobileMenuOpen && (
-                <motion.div
-                  key="mobile-drawer"
-                  initial={{ x: "100%" }}
-                  animate={{ x: 0 }}
-                  exit={{ x: "100%" }}
-                  transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
-                  className="fixed right-0 top-0 bottom-0 h-full w-full max-w-[280px] z-[100001] bg-theme-bg border-l border-theme-border shadow-2xl flex flex-col overflow-hidden outline-none"
-                >
-                  {/* Ambient Background Accents */}
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
+              {/* Drawer Container */}
+              <div 
+                className={`fixed right-0 top-0 bottom-0 h-full w-full max-w-[280px] z-[100001] bg-theme-bg border-l border-theme-border shadow-2xl flex flex-col overflow-hidden outline-none transition-transform duration-200 ease-out transform ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+              >
+                {/* Ambient Background Accents */}
+                <div className="absolute top-0 right-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
 
-                  {/* Header */}
-                  <div className="px-6 py-6 border-b border-theme-border/50 flex flex-row items-center justify-between bg-transparent shrink-0">
-                    <Link 
-                      to="/"
-                      onClick={(e) => {
-                        handleLinkClick('/', e);
-                        if (location.pathname === '/') {
-                          e.preventDefault();
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }
-                      }}
-                      className="flex items-center gap-2 hover:opacity-90 transition-opacity"
-                    >
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg overflow-hidden p-1.5 ${isDark ? 'bg-[#121214] border border-[#242426]' : 'bg-[#00ba68]'}`}>
-                        <img 
-                          src={isDark ? "/assets/logo-green.svg" : "/assets/logo-white.svg"} 
-                          alt="Dity Flow" 
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-extrabold tracking-tighter text-theme-main text-lg leading-none">Dity Flow</span>
-                      </div>
-                    </Link>
-                    <button 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="p-1.5 rounded-lg text-theme-textDim hover:text-theme-accent hover:bg-theme-card transition-all outline-none"
-                      aria-label="Close menu"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                {/* Header */}
+                <div className="px-6 py-6 border-b border-theme-border/50 flex flex-row items-center justify-between bg-transparent shrink-0">
+                  <Link 
+                    to="/"
+                    onClick={(e) => {
+                      handleLinkClick('/', e);
+                      if (location.pathname === '/') {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg overflow-hidden p-1.5 ${isDark ? 'bg-[#121214] border border-[#242426]' : 'bg-[#00ba68]'}`}>
+                      <img 
+                        src={isDark ? "/assets/logo-green.svg" : "/assets/logo-white.svg"} 
+                        alt="Dity Flow" 
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-extrabold tracking-tighter text-theme-main text-lg leading-none">Dity Flow</span>
+                    </div>
+                  </Link>
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg text-theme-textDim hover:text-theme-accent hover:bg-theme-card transition-all outline-none"
+                    aria-label="Close menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
 
-                  {/* Body */}
-                  <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-none outline-none">
-                    <nav className="flex flex-col gap-1">
-                      {navLinks.map((link, idx) => {
-                        const isHome = link.href === '/#hero';
-                        const linkHash = link.href?.includes('#') ? link.href.substring(link.href.indexOf('#')) : null;
-                        const isActive = isHome 
-                          ? (location.pathname === '/' && (location.hash === '' || location.hash === '#hero' || location.hash === '#')) 
-                          : (linkHash && location.hash === linkHash && location.pathname === '/');
-                      
-                        const isFeatureActive = link.type === "dropdown" && features.some(f => location.pathname === f.href);
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-none outline-none">
+                  <nav className="flex flex-col gap-1">
+                    {navLinks.map((link, idx) => {
+                      const isHome = link.href === '/#hero';
+                      const linkHash = link.href?.includes('#') ? link.href.substring(link.href.indexOf('#')) : null;
+                      const isActive = isHome 
+                        ? (location.pathname === '/' && (activeSection === 'hero' || activeSection === '')) 
+                        : (linkHash && activeSection === linkHash.replace('#', '') && location.pathname === '/');
+                    
+                      const isFeatureActive = link.type === "dropdown" && features.some(f => location.pathname === f.href);
 
-                        return (
-                          <motion.div
-                            key={link.label}
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.05 * idx }}
-                          >
-                            {link.type === "dropdown" ? (
-                              <div className={`flex flex-col ${isMobileFeaturesOpen ? 'mb-2' : 'mb-1'}`}>
-                                <button 
-                                  onClick={() => setIsMobileFeaturesOpen(!isMobileFeaturesOpen)}
-                                  className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl transition-all ${
-                                    isFeatureActive || isMobileFeaturesOpen 
-                                      ? 'text-theme-accent bg-theme-accent/5 font-bold' 
-                                      : 'text-theme-main hover:bg-theme-card'
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-3">
-                                    {link.icon && <link.icon className={`w-5 h-5 ${isFeatureActive || isMobileFeaturesOpen ? 'text-theme-accent' : 'text-theme-textDim'}`} />}
-                                    <span className={`text-lg tracking-tight ${isFeatureActive || isMobileFeaturesOpen ? 'font-black' : 'font-bold'}`}>
-                                      {link.label}
-                                    </span>
-                                    {isFeatureActive && !isMobileFeaturesOpen && (
-                                      <div className="w-1.5 h-1.5 rounded-full bg-theme-accent" />
-                                    )}
-                                  </span>
-                                  <ChevronDown className={`w-4 h-4 transition-transform duration-500 ${isMobileFeaturesOpen ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                <AnimatePresence>
-                                  {isMobileFeaturesOpen && (
-                                    <motion.div 
-                                      initial={{ opacity: 0, height: 0 }}
-                                      animate={{ opacity: 1, height: "auto" }}
-                                      exit={{ opacity: 0, height: 0 }}
-                                      transition={{ duration: 0.2 }}
-                                      className="pl-4 flex flex-col gap-1 mt-1 overflow-hidden"
-                                    >
-                                      {features.map((feat) => {
-                                        const isFeatActive = location.pathname === feat.href;
-                                        return (
-                                          <Link
-                                            key={feat.title}
-                                            to={feat.active ? feat.href : "#"}
-                                            onClick={(e) => {
-                                              if (feat.active) {
-                                                handleLinkClick(feat.href, e);
-                                              }
-                                            }}
-                                            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all ${
-                                              !feat.active 
-                                                ? 'opacity-40 cursor-default text-theme-textDim' 
-                                                : isFeatActive 
-                                                  ? 'text-theme-accent font-bold bg-theme-accent/5' 
-                                                  : 'text-theme-main hover:bg-theme-card'
-                                            }`}
-                                          >
-                                            <feat.icon className="w-4 h-4 shrink-0" />
-                                            <span>{feat.title}</span>
-                                          </Link>
-                                        );
-                                      })}
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            ) : (
-                              <Link
-                                to={link.href || "/"}
-                                onClick={(e) => {
-                                  handleLinkClick(link.href || "/", e);
-                                }}
+                      return (
+                        <div key={link.label}>
+                          {link.type === "dropdown" ? (
+                            <div className={`flex flex-col ${isMobileFeaturesOpen ? 'mb-2' : 'mb-1'}`}>
+                              <button 
+                                onClick={() => setIsMobileFeaturesOpen(!isMobileFeaturesOpen)}
                                 className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl transition-all ${
-                                  isActive 
+                                  isFeatureActive || isMobileFeaturesOpen 
                                     ? 'text-theme-accent bg-theme-accent/5 font-bold' 
                                     : 'text-theme-main hover:bg-theme-card'
-                                  }`}
+                                }`}
                               >
                                 <span className="flex items-center gap-3">
-                                  {link.icon && <link.icon className={`w-5 h-5 ${isActive ? 'text-theme-accent' : 'text-theme-textDim'}`} />}
-                                  <span className={`text-lg tracking-tight ${isActive ? 'font-black' : 'font-bold'}`}>
+                                  {link.icon && <link.icon className={`w-5 h-5 ${isFeatureActive || isMobileFeaturesOpen ? 'text-theme-accent' : 'text-theme-textDim'}`} />}
+                                  <span className={`text-lg tracking-tight ${isFeatureActive || isMobileFeaturesOpen ? 'font-black' : 'font-bold'}`}>
                                     {link.label}
                                   </span>
+                                  {isFeatureActive && !isMobileFeaturesOpen && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-theme-accent" />
+                                  )}
                                 </span>
-                                {isActive && (
-                                  <motion.div 
-                                    layoutId="mobile-nav-indicator"
-                                    className="w-1.5 h-1.5 bg-theme-accent rounded-full"
-                                  />
-                                )}
-                              </Link>
-                            )}
-                          </motion.div>
-                        );
-                      })}
-                    </nav>
-                  </div>
+                                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isMobileFeaturesOpen ? 'rotate-180' : ''}`} />
+                              </button>
 
-                  {/* Footer */}
-                  <div className="px-6 py-6 border-t border-theme-border/30 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-semibold text-theme-textDim opacity-50 tracking-wider">© 2026 DITY FLOW</span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>,
+                              {isMobileFeaturesOpen && (
+                                <div className="pl-4 flex flex-col gap-1 mt-1 overflow-hidden transition-all duration-200">
+                                  {features.map((feat) => {
+                                    const isFeatActive = location.pathname === feat.href;
+                                    return (
+                                      <Link
+                                        key={feat.title}
+                                        to={feat.active ? feat.href : "#"}
+                                        onClick={(e) => {
+                                          if (feat.active) {
+                                            handleLinkClick(feat.href, e);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all ${
+                                          !feat.active 
+                                            ? 'opacity-40 cursor-default text-theme-textDim' 
+                                            : isFeatActive 
+                                              ? 'text-theme-accent font-bold bg-theme-accent/5' 
+                                              : 'text-theme-main hover:bg-theme-card'
+                                        }`}
+                                      >
+                                        <feat.icon className="w-4 h-4 shrink-0" />
+                                        <span>{feat.title}</span>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <Link
+                              to={link.href || "/"}
+                              onClick={(e) => {
+                                handleLinkClick(link.href || "/", e);
+                              }}
+                              className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl transition-all ${
+                                isActive 
+                                  ? 'text-theme-accent bg-theme-accent/5 font-bold' 
+                                  : 'text-theme-main hover:bg-theme-card'
+                                }`}
+                            >
+                              <span className="flex items-center gap-3">
+                                {link.icon && <link.icon className={`w-5 h-5 ${isActive ? 'text-theme-accent' : 'text-theme-textDim'}`} />}
+                                <span className={`text-lg tracking-tight ${isActive ? 'font-black' : 'font-bold'}`}>
+                                  {link.label}
+                                </span>
+                              </span>
+                              {isActive && (
+                                <div className="w-1.5 h-1.5 bg-theme-accent rounded-full shrink-0" />
+                              )}
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </nav>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-6 border-t border-theme-border/30 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-theme-textDim opacity-50 tracking-wider">© 2026 DITY FLOW</span>
+                </div>
+              </div>
+            </div>,
             document.body
           )}
         </div>
