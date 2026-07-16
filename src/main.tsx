@@ -6,10 +6,11 @@ import App from './App.tsx';
 import './index.css';
 import { Navbar } from './components/ui/navbar';
 
-const OptimizerTransfer = lazy(() => import('./app-main.tsx'));
+const OptimizerTransfer = lazy(() => import('./app-main.tsx').then(m => ({ default: m.AppMain })));
 const HelpCenter = lazy(() => import('./pages/help.tsx').then(m => ({ default: m.HelpCenter })));
 const PrivacyPolicy = lazy(() => import('./pages/privacy.tsx').then(m => ({ default: m.PrivacyPolicy })));
 const TermsOfService = lazy(() => import('./pages/terms.tsx').then(m => ({ default: m.TermsOfService })));
+const DataSource = lazy(() => import('./pages/data-source.tsx').then(m => ({ default: m.DataSource })));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -92,6 +93,7 @@ function RoutesWithTransition() {
         <Route path="/help" element={<PageTransition><HelpCenter /></PageTransition>} />
         <Route path="/privacy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
         <Route path="/terms" element={<PageTransition><TermsOfService /></PageTransition>} />
+        <Route path="/sumber-data" element={<PageTransition><DataSource /></PageTransition>} />
         <Route path="*" element={<PageTransition><App /></PageTransition>} />
       </RoutesComponent>
     </AnimatePresence>

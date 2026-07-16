@@ -289,7 +289,7 @@ export function Navbar() {
             className="text-theme-textDim hover:text-theme-accent transition-colors focus:outline-none p-2 rounded-xl bg-theme-card border border-theme-border shadow-sm cursor-pointer" 
             aria-label="Toggle theme"
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
           {/* Mobile Menu Trigger Button */}
@@ -315,8 +315,8 @@ export function Navbar() {
                 className={`fixed right-0 top-0 bottom-0 h-full w-full max-w-[280px] z-[100001] bg-theme-bg border-l border-theme-border shadow-2xl flex flex-col overflow-hidden outline-none transition-transform duration-200 ease-out transform ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}
               >
                 {/* Ambient Background Accents */}
-                <div className="absolute top-0 right-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-theme-accent/5 blur-[60px] -z-10 rounded-full" />
+                <div className="absolute top-0 right-0 w-48 h-48 bg-theme-accent/5  -z-10 rounded-full" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-theme-accent/5  -z-10 rounded-full" />
 
                 {/* Header */}
                 <div className="px-6 py-6 border-b border-theme-border/50 flex flex-row items-center justify-between bg-transparent shrink-0">

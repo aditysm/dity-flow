@@ -17,6 +17,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./index.css";
+import dagre from 'dagre';
 import { toPng } from "html-to-image";
 import { 
   ArrowLeftRight, 
@@ -25,10 +26,10 @@ import {
   Download, 
   Maximize2, 
   ChevronLeft, 
-  ChevronRight, 
+  ChevronRight,
+  ChevronDown,
   AlertCircle, 
   Check, 
-  WifiOff, 
   X, 
   Loader2, 
   Printer, 
@@ -45,7 +46,9 @@ import {
   Scan,
   Zap,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Landmark,
+  Wallet
 } from "lucide-react";
 import { Footer } from "@/src/components/ui/footer";
 import { Instagram, Mail, MessageCircle } from "lucide-react";
@@ -64,9 +67,12 @@ interface Institution {
   id: string;
   name: string;
   type: string;
+  logo_url?: string;
 }
 
 interface Step {
+  route_id: number;
+  total_route_fee: number | string;
   from_institution: string;
   to_institution: string;
   fee_cost: number | string;
@@ -76,61 +82,82 @@ interface Step {
 
 // Custom Node Component
 function InstitutionNode({ data }: any) {
-  const { label, isFirst, isLast, accentColor, orientation, isAnySelected, isNodeSelected } = data;
+  const { label, isFirst, isLast, logo_url, isAnySelected, isNodeSelected, orientation, type, belongsToRoutes, highlightedRouteId, id } = data;
   const isHorizontal = orientation === "horizontal";
 
-  // Compute borders and background based on selected state
-  let borderColor = isLast ? "var(--color-accent)" : "rgba(var(--color-accent-rgb, 0, 186, 104), 0.25)";
-  let shadow = isLast ? `0 4px 14px -3px rgba(var(--color-accent-rgb, 0, 186, 104), 0.25)` : "none";
-  let textColor = isLast ? "var(--color-accent)" : "var(--color-text-main)";
+  const routeColors = ['#00C853', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4'];
+  const getRouteColor = (rid: number) => routeColors[(rid - 1) % routeColors.length];
 
-  if (isAnySelected) {
-    if (isNodeSelected) {
-      borderColor = "var(--color-accent)";
-      shadow = `0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent), 0 0 18px rgba(var(--color-accent-rgb, 0, 186, 104), 0.5)`;
-      textColor = "var(--color-accent)";
-    } else {
-      borderColor = "rgba(var(--color-accent-rgb, 0, 186, 104), 0.15)";
-      shadow = "none";
-      textColor = "var(--color-text-main)";
-    }
-  }
+  const isHighlighted = highlightedRouteId !== null && belongsToRoutes?.includes(highlightedRouteId);
+  const activeColor = highlightedRouteId !== null ? getRouteColor(highlightedRouteId) : "#00C853";
+  const isDimmed = highlightedRouteId !== null && !isHighlighted;
+
+  // Compute colors based on theme and selection
+  const accentColor = activeColor;
+  const borderColor = isHighlighted ? accentColor : (isNodeSelected ? "#00C853" : (isAnySelected ? "var(--color-app-border-dim)" : "var(--color-app-border)"));
+  const textColor = (isHighlighted || isNodeSelected) ? accentColor : "var(--color-text-main)";
+  const shadow = (isHighlighted || isNodeSelected) ? `0 0 0 2px var(--color-bg), 0 0 0 4px ${accentColor}, 0 0 20px ${accentColor}44` : "0 4px 6px var(--color-shadow)";
+  const opacity = isHighlighted ? 1 : (isDimmed ? 0.3 : (isAnySelected ? (isNodeSelected ? 1 : 0.5) : 1));
+
+  const isBank = type?.toLowerCase().includes('bank');
+  const isWallet = type?.toLowerCase().includes('wallet') || type?.toLowerCase().includes('digital') || type?.toLowerCase().includes('gopay') || type?.toLowerCase().includes('dana') || type?.toLowerCase().includes('ovo') || type?.toLowerCase().includes('shopee') || type?.toLowerCase().includes('kantong');
 
   return (
     <div 
-      className={`px-5 py-3 sm:px-6 sm:py-3.5 rounded-2xl font-bold text-sm sm:text-base min-w-[150px] max-w-[240px] text-center border-2 transition-all relative select-none ${isAnySelected && isNodeSelected ? 'scale-105' : ''}`}
+      className={`px-4 py-2.5 rounded-2xl font-bold text-sm min-w-[150px] max-w-[200px] flex items-center justify-center border-2 transition-all relative select-none ${(isHighlighted || isNodeSelected) ? 'scale-105 z-10' : ''}`}
       style={{
         backgroundColor: "var(--color-card)",
         borderColor: borderColor,
         color: textColor,
-        boxShadow: shadow !== "none" ? shadow : "0 4px 6px var(--color-shadow)",
+        boxShadow: shadow,
+        height: 60,
+        gap: '10px',
+        opacity: opacity
       } as any}
     >
       {!isFirst && (
         <Handle
           type="target"
           position={isHorizontal ? Position.Left : Position.Top}
-          style={{ 
-            background: isAnySelected ? (isNodeSelected ? "var(--color-accent)" : "var(--color-app-border)") : "var(--color-app-border)", 
-            width: 8, 
-            height: 8, 
-            border: "none",
-            transition: "all 0.3s ease",
-          }}
+          className="!w-2 !h-2 !border-none"
+          style={{ background: (isHighlighted || isNodeSelected) ? accentColor : "var(--color-app-border)" }}
         />
       )}
-      <div className="whitespace-normal break-words leading-tight">{label}</div>
+      
+      {logo_url ? (
+        <div className="w-6 h-6 rounded-lg bg-theme-bg p-1 flex items-center justify-center border border-theme-border/50 overflow-hidden shadow-sm shrink-0">
+          <img 
+            src={logo_url} 
+            alt={label} 
+            className="w-full h-full object-contain" 
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+        </div>
+      ) : (
+        <div className="w-6 h-6 rounded-lg bg-theme-bg flex items-center justify-center shrink-0">
+          {isBank ? (
+            <Landmark className="w-3 h-3 text-theme-textDim" />
+          ) : isWallet ? (
+            <Wallet className="w-3 h-3 text-theme-textDim" />
+          ) : (
+            <Zap className="w-3 h-3 text-theme-textDim" />
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col items-start justify-center flex-1 min-w-0">
+        <div className="leading-tight tracking-tight font-black uppercase text-[10px] sm:text-[11px] truncate w-full">
+          {id}
+        </div>
+      </div>
+
       {!isLast && (
         <Handle
           type="source"
           position={isHorizontal ? Position.Right : Position.Bottom}
-          style={{ 
-            background: isAnySelected ? (isNodeSelected ? "var(--color-accent)" : "var(--color-app-border)") : "var(--color-app-border)", 
-            width: 8, 
-            height: 8, 
-            border: "none",
-            transition: "all 0.3s ease",
-          }}
+          className="!w-2 !h-2 !border-none"
+          style={{ background: (isHighlighted || isNodeSelected) ? accentColor : "var(--color-app-border)" }}
         />
       )}
     </div>
@@ -150,6 +177,9 @@ function StepEdge({
   markerEnd,
   data,
 }: EdgeProps) {
+  const { fee_cost, step_notes, routeColor, isSelected, isAnySelected, onSelect, orientation, belongsToRoutes, highlightedRouteId } = (data || {}) as any;
+  const isHorizontal = orientation === "horizontal";
+  
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -157,12 +187,21 @@ function StepEdge({
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 16,
+    borderRadius: 20,
   });
 
-  const { fee_cost, step_notes, accentColor, badgeBgColor, isSelected, isAnySelected, onSelect } = (data || {}) as any;
   const isFree = parseFloat(fee_cost) === 0;
-  const isDeducted = data?.deduction_type === "DEDUCTED_FROM_TARGET";
+  const isHighlighted = highlightedRouteId !== null && belongsToRoutes?.includes(highlightedRouteId);
+  
+  const routeColors = ['#00C853', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4'];
+  const getRouteColor = (rid: number) => routeColors[(rid - 1) % routeColors.length];
+  
+  const activeColor = highlightedRouteId !== null ? getRouteColor(highlightedRouteId) : (routeColor || "#00C853");
+  // If a route is highlighted, non-highlighted edges should be dimmed
+  const isDimmed = highlightedRouteId !== null && !isHighlighted;
+  const strokeColor = isHighlighted ? activeColor : (isDimmed ? "var(--color-app-border-dim)" : (isAnySelected ? (isSelected ? activeColor : "var(--color-app-border-dim)") : activeColor));
+  const strokeWidth = isHighlighted ? 5 : (isSelected ? 4 : 2.5);
+  const opacity = isHighlighted ? 1 : (isDimmed ? 0.15 : (isAnySelected ? (isSelected ? 1 : 0.2) : 0.8));
 
   return (
     <>
@@ -171,9 +210,10 @@ function StepEdge({
         path={edgePath}
         markerEnd={markerEnd}
         style={{ 
-          stroke: isAnySelected && isSelected ? "var(--color-accent)" : "var(--color-app-border)", 
-          strokeWidth: isAnySelected && isSelected ? 3 : 2,
-          opacity: isAnySelected ? (isSelected ? 1 : 0.4) : 1,
+          stroke: strokeColor, 
+          strokeWidth: strokeWidth,
+          opacity: opacity,
+          transition: "all 0.3s ease",
           ...style
         }}
       />
@@ -181,42 +221,47 @@ function StepEdge({
         <div
           style={{
             position: "absolute",
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) translate(${isHorizontal ? '0px' : '0px'}, ${isHorizontal ? '-45px' : '0px'})`,
             pointerEvents: "all",
+            opacity: opacity,
+            transition: "all 0.3s ease",
+            zIndex: isHighlighted ? 100 : 10
           }}
           className="nodrag nopan"
         >
           <div 
             onClick={onSelect}
-            className={`bg-theme-card border rounded-xl p-2.5 shadow-md text-center max-w-[220px] min-w-[120px] cursor-pointer transition-all hover:scale-105 active:scale-95 select-none ${
-              isSelected 
-                ? "border-theme-accent ring-2 ring-theme-accent/30 scale-105" 
-                : "border-theme-border hover:border-theme-accent/50"
+            className={`bg-theme-card border rounded-xl p-2 sm:p-2.5 shadow-xl text-center max-w-[200px] min-w-[100px] cursor-pointer transition-all hover:scale-110 active:scale-95 select-none ${
+              isHighlighted || isSelected 
+                ? "ring-4 scale-105 z-50" 
+                : "border-theme-border opacity-90"
             }`}
+            style={{ 
+              borderColor: (isHighlighted || isSelected) ? activeColor : "var(--color-app-border)",
+              boxShadow: (isHighlighted || isSelected) ? `0 10px 15px -3px ${activeColor}44, 0 4px 6px -4px ${activeColor}44` : undefined,
+              ringColor: (isHighlighted || isSelected) ? `${activeColor}33` : undefined
+            }}
           >
             {isFree ? (
               <div 
-                className="font-mono px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide inline-block mb-1 select-none transition-all" 
-                style={{ 
-                  color: isSelected ? "var(--color-bg)" : accentColor, 
-                  backgroundColor: isSelected ? accentColor : badgeBgColor 
-                }}
+                className="font-mono px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black tracking-wider inline-block mb-1 select-none transition-all text-white" 
+                style={{ backgroundColor: activeColor }}
               >
                 GRATIS
               </div>
             ) : (
               <div 
-                className={`font-mono px-2.5 py-0.5 rounded-full text-[9px] font-bold border tracking-wide inline-block mb-1 select-none transition-all ${
-                  isSelected 
-                    ? "bg-theme-accent text-theme-inverted border-theme-accent" 
+                className={`font-mono px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black border tracking-wider inline-block mb-1 select-none transition-all ${
+                  isHighlighted || isSelected 
+                    ? "text-theme-inverted border-transparent" 
                     : "bg-theme-badge text-theme-textDim border-theme-border"
                 }`}
+                style={{ backgroundColor: (isHighlighted || isSelected) ? activeColor : undefined }}
               >
                 Rp{new Intl.NumberFormat("id-ID").format(parseFloat(fee_cost))}
-                {isDeducted && <span className="text-[8px] opacity-75"> (Dipotong)</span>}
               </div>
             )}
-            <div className={`text-[10px] leading-tight font-medium select-none whitespace-normal break-words transition-all ${isSelected ? "text-theme-main font-semibold" : "text-theme-textDim"}`}>
+            <div className={`text-[9px] sm:text-[10px] leading-tight font-bold select-none whitespace-normal break-words transition-all ${(isHighlighted || isSelected) ? "text-theme-main" : "text-theme-textDim"}`}>
               {step_notes}
             </div>
           </div>
@@ -257,10 +302,9 @@ function CustomSelect({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedName = useMemo(() => {
-    const found = options.find(o => o.id === value);
-    return found ? found.name : defaultText;
-  }, [value, options, defaultText]);
+  const selectedItem = useMemo(() => {
+    return options.find(o => o.id === value);
+  }, [value, options]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -295,11 +339,22 @@ function CustomSelect({
       <button
         type="button"
         onClick={handleToggle}
-        className="w-full bg-theme-card border border-theme-border rounded-xl pl-4 pr-10 py-3.5 text-base sm:text-[0.9375rem] text-theme-main text-left focus:outline-none focus:border-theme-accent transition-colors flex items-center justify-between"
+        className="w-full bg-theme-card border border-theme-border rounded-xl px-4 py-3 text-base sm:text-[0.9375rem] text-theme-main text-left focus:outline-none focus:border-theme-accent transition-colors flex items-center justify-between min-h-[56px]"
       >
-        <span className={`truncate ${value ? "text-theme-main" : "text-theme-textDim"}`}>
-          {selectedName}
-        </span>
+        <div className="flex items-center gap-3 truncate">
+          {selectedItem?.logo_url ? (
+            <div className="w-7 h-7 rounded-lg bg-theme-badge p-1 flex items-center justify-center border border-theme-border/50 shrink-0 overflow-hidden">
+              <img src={selectedItem.logo_url} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            </div>
+          ) : value ? (
+            <div className="w-7 h-7 rounded-lg bg-theme-badge flex items-center justify-center shrink-0">
+              <Landmark className="w-4 h-4 text-theme-textDim" />
+            </div>
+          ) : null}
+          <span className={`truncate ${value ? "text-theme-main font-bold" : "text-theme-textDim font-medium"}`}>
+            {selectedItem ? selectedItem.name : defaultText}
+          </span>
+        </div>
         <svg 
           className={`h-4 w-4 text-theme-main transition-transform dropdown-icon flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} 
           fill="none" 
@@ -322,14 +377,14 @@ function CustomSelect({
               placeholder="Cari bank/e-wallet..."
             />
           </div>
-          <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
             <button
               type="button"
               onClick={() => {
                 onChange("");
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-3 rounded-lg text-xs sm:text-sm text-theme-main hover:bg-theme-border transition-colors truncate"
+              className="w-full text-left px-4 py-3 rounded-lg text-xs sm:text-sm text-theme-main hover:bg-theme-border transition-colors truncate font-medium"
             >
               {defaultText}
             </button>
@@ -341,13 +396,22 @@ function CustomSelect({
                   onChange(opt.id);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-4 py-3 rounded-lg text-xs sm:text-sm transition-colors truncate ${
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs sm:text-sm transition-colors flex items-center gap-3 ${
                   value === opt.id 
-                    ? "bg-theme-accent/10 text-theme-accent font-semibold" 
-                    : "text-theme-main hover:bg-theme-border"
+                    ? "bg-theme-accent/10 text-theme-accent font-bold" 
+                    : "text-theme-main hover:bg-theme-border font-medium"
                 }`}
               >
-                {opt.name}
+                {opt.logo_url ? (
+                  <div className="w-6 h-6 rounded-lg bg-theme-badge p-1 flex items-center justify-center border border-theme-border/50 shrink-0 overflow-hidden shadow-sm">
+                    <img src={opt.logo_url} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-lg bg-theme-bg flex items-center justify-center shrink-0">
+                    <Landmark className="w-3 h-3 text-theme-textDim" />
+                  </div>
+                )}
+                <span className="truncate">{opt.name}</span>
               </button>
             ))}
             {filteredOptions.length === 0 && (
@@ -425,8 +489,9 @@ function replaceModernColors(str: string): string {
 }
 
 // Inside the Flow Component to have access to useReactFlow
-function FlowContainer({ 
-  routeData, 
+function MultiFlowContainer({ 
+  routesData, 
+  allRouteData,
   orientation, 
   flowTheme, 
   accentColor, 
@@ -438,10 +503,15 @@ function FlowContainer({
   sourceId,
   destId,
   institutions,
-  amountVal,
-  bypassQuota
+  bypassQuota,
+  showAllRoutes,
+  highlightedRouteId,
+  setHighlightedRouteId,
+  selectedEdgeId,
+  setSelectedEdgeId
 }: {
-  routeData: Step[];
+  routesData: Step[][];
+  allRouteData: Step[][];
   orientation: "horizontal" | "vertical";
   flowTheme: "default" | "ocean" | "vibrant";
   accentColor: string;
@@ -453,23 +523,23 @@ function FlowContainer({
   sourceId: string;
   destId: string;
   institutions: Institution[];
-  amountVal: number;
   bypassQuota: boolean;
+  showAllRoutes: boolean;
+  highlightedRouteId: number | null;
+  setHighlightedRouteId: (id: number | null) => void;
+  selectedEdgeId: string | null;
+  setSelectedEdgeId: (id: string | null) => void;
 }) {
   const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const lastRoutesDataHash = useRef<string>("");
+  const initialLayoutDone = useRef<boolean>(false);
 
-  // Custom Toast State
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  // Export Preview Modal States
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewImageSrc, setPreviewImageSrc] = useState<string>("");
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-
-  // Fullscreen and Expensive checking states
   const [isFullscreen, setIsFullscreen] = useState(false);
   const flowContainerRef = useRef<HTMLDivElement>(null);
 
@@ -507,245 +577,41 @@ function FlowContainer({
     }
   };
 
-  const handleFitView = () => {
-    if (routeData && routeData.length > 0) {
-      const institutionsList = [routeData[0].from_institution];
-      routeData.forEach((step) => {
-        institutionsList.push(step.to_institution);
-      });
-
-      const resetNodes = nodes.map((node, idx) => {
-        const isHorizontal = orientation === "horizontal";
-        const position = isHorizontal 
-          ? { x: idx * 280 + 40, y: 140 } 
-          : { x: 140, y: idx * 180 + 40 };
-        return { ...node, position };
-      });
-      setNodes(resetNodes);
-    }
-    
-    setTimeout(() => {
-      fitView({ padding: 0.2, duration: 0 });
-    }, 100);
-  };
-
   const { zoomIn, zoomOut } = useReactFlow();
 
   const isExpensive = useMemo(() => {
     return totalFee >= 6500;
   }, [totalFee]);
 
-  // Re-fit view when fullscreen mode is toggled
+  // Auto-fit when fullscreen or highlighted route changes
   useEffect(() => {
     setTimeout(() => {
-      fitView({ padding: 0.2, duration: 0 });
-    }, 50);
-  }, [isFullscreen, fitView]);
-
-  const handleOpenPreview = async () => {
-    // Exit fullscreen if active so layout renders cleanly
-    if (document.fullscreenElement) {
-      try {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen();
+      if (highlightedRouteId !== null) {
+        const routeNodes = nodes.filter(n => n.data.belongsToRoutes?.includes(highlightedRouteId));
+        if (routeNodes.length > 0) {
+          fitView({ nodes: routeNodes, padding: 0.35, duration: 800 });
+          return;
         }
-        await new Promise(r => setTimeout(r, 300));
-      } catch (err) {
-        console.error("Failed to exit fullscreen", err);
+      }
+      fitView({ padding: 0.25, duration: 600 });
+    }, isFullscreen ? 400 : 100);
+  }, [isFullscreen, fitView, highlightedRouteId, nodes]);
+
+  const handleFitView = () => {
+    if (highlightedRouteId !== null) {
+      const routeNodes = nodes.filter(n => n.data.belongsToRoutes?.includes(highlightedRouteId));
+      if (routeNodes.length > 0) {
+        fitView({ 
+          nodes: routeNodes, 
+          padding: 0.3, 
+          duration: 600 
+        });
+        return;
       }
     }
-
-    setIsGeneratingPreview(true);
-    setIsPreviewModalOpen(true);
-    setPreviewImageSrc("");
-
-    const originalGetComputedStyle = window.getComputedStyle;
-    window.getComputedStyle = function(el: Element, pseudoElt?: string) {
-      const style = originalGetComputedStyle.call(window, el, pseudoElt);
-      return new Proxy(style, {
-        get(target, prop) {
-          const value = Reflect.get(target, prop);
-          if (typeof value === "function") {
-            return value.bind(target);
-          }
-          if (typeof value === "string" && (value.includes("oklch") || value.includes("oklab"))) {
-            return replaceModernColors(value);
-          }
-          return value;
-        }
-      });
-    };
-
-    try {
-      // Fit all elements in viewport cleanly with balanced padding
-      // to avoid nodes going too close to edge or being cut off on smaller viewports.
-      const isMobile = window.innerWidth < 768;
-      const fitPadding = isMobile ? 0.35 : 0.25;
-      fitView({ padding: fitPadding });
-      await new Promise(r => setTimeout(r, 900));
-
-      const container = flowContainerRef.current;
-      if (!container) throw new Error("Sandbox container not found");
-
-      // Temporarily reveal watermark inside sandbox
-      const watermark = container.querySelector(".export-watermark");
-      if (watermark) watermark.classList.remove("hidden");
-      
-      const originalOverflow = container.style.overflow;
-      container.style.overflow = "visible";
-
-      const dataUrl = await toPng(container, {
-        backgroundColor: isDark ? "#050505" : "#f8fafc",
-        pixelRatio: 2.5,
-        skipFonts: true,
-        filter: (element) => {
-          if (!element || !(element instanceof Element)) return true;
-          return !(element.hasAttribute("data-html2canvas-ignore") || 
-                   element.classList?.contains("react-flow__controls") ||
-                   element.classList?.contains("react-flow__attribution") ||
-                   element.closest("[data-html2canvas-ignore]") !== null);
-        }
-      });
-
-      container.style.overflow = originalOverflow;
-      if (watermark) watermark.classList.add("hidden");
-
-      // Restore clean view layout after screenshot is captured
-      fitView({ padding: 0.2, duration: 0 });
-
-      setPreviewImageSrc(dataUrl);
-    } catch (err) {
-      console.error(err);
-      setToastMsg("Gagal memuat pratinjau gambar.");
-      setTimeout(() => setToastMsg(null), 3000);
-      setIsPreviewModalOpen(false);
-    } finally {
-      window.getComputedStyle = originalGetComputedStyle;
-      setIsGeneratingPreview(false);
-    }
+    fitView({ padding: 0.25, duration: 400 });
   };
 
-  const handleSavePNGFromPreview = () => {
-    if (!previewImageSrc) return;
-    const link = document.createElement("a");
-    link.download = `dity-flow-route-${Date.now()}.png`;
-    link.href = previewImageSrc;
-    link.click();
-    setIsPreviewModalOpen(false);
-  };
-
-  // Auto fit view only when route data or layout orientation changes
-  useEffect(() => {
-    if (routeData && routeData.length > 0) {
-      setTimeout(() => {
-        fitView({ padding: 0.2, duration: 0 });
-      }, 100);
-    }
-  }, [routeData, orientation, fitView]);
-
-  // Node & Edge Generation
-  useEffect(() => {
-    if (routeData && routeData.length > 0) {
-      const institutionsList: string[] = [routeData[0].from_institution];
-      routeData.forEach(step => {
-        institutionsList.push(step.to_institution);
-      });
-
-      const isAnySelected = selectedEdgeId !== null;
-
-      const newNodes = institutionsList.map((name, idx) => {
-        const isFirst = idx === 0;
-        const isLast = idx === institutionsList.length - 1;
-        const isHorizontal = orientation === "horizontal";
-
-        // Let's determine if this node is connected to the selected edge
-        // If selectedEdgeId is `edge-K`, it connects `node-K` and `node-K+1`
-        let isNodeSelected = false;
-        if (selectedEdgeId) {
-          const selectedIdx = parseInt(selectedEdgeId.replace("edge-", ""), 10);
-          if (idx === selectedIdx || idx === selectedIdx + 1) {
-            isNodeSelected = true;
-          }
-        }
-
-        // Layout node positions dynamically
-        const position = isHorizontal 
-          ? { x: idx * 280 + 40, y: 140 } 
-          : { x: 140, y: idx * 180 + 40 };
-
-        return {
-          id: `node-${idx}`,
-          type: "institutionNode",
-          position,
-          data: {
-            label: name,
-            isFirst,
-            isLast,
-            orientation,
-            accentColor,
-            isAnySelected,
-            isNodeSelected,
-          },
-        };
-      });
-
-      const newEdges = routeData.map((step, idx) => {
-        const edgeId = `edge-${idx}`;
-        const isSelected = selectedEdgeId === edgeId;
-        const isEdgeAnimated = isAnySelected; // If any is selected, animate the entire path!
-
-        return {
-          id: edgeId,
-          source: `node-${idx}`,
-          target: `node-${idx + 1}`,
-          type: "stepEdge",
-          animated: isEdgeAnimated,
-          data: {
-            fee_cost: step.fee_cost,
-            step_notes: step.step_notes,
-            deduction_type: step.deduction_type,
-            accentColor,
-            badgeBgColor,
-            isSelected,
-            isAnySelected,
-            onSelect: () => setSelectedEdgeId(edgeId),
-          },
-          style: {
-            stroke: isAnySelected 
-              ? (isSelected ? "var(--color-accent)" : "var(--color-app-border)") 
-              : "var(--color-app-border)",
-            strokeWidth: isAnySelected ? (isSelected ? 5 : 2) : 2,
-            filter: isAnySelected && isSelected 
-              ? `drop-shadow(0px 0px 6px var(--color-accent))` 
-              : "none",
-            transition: "all 0.3s ease",
-            opacity: isAnySelected ? (isSelected ? 1 : 0.4) : 1,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 16,
-            height: 16,
-            color: isAnySelected 
-              ? (isSelected ? "var(--color-accent)" : "var(--color-app-border)") 
-              : "var(--color-app-border)",
-          },
-        };
-      });
-
-      setNodes(newNodes);
-      setEdges(newEdges);
-
-    } else {
-      setNodes([]);
-      setEdges([]);
-    }
-  }, [routeData, orientation, flowTheme, accentColor, badgeBgColor, selectedEdgeId]);
-
-  // Rich Text & Web Share function
   const handleShare = async () => {
     const totalFeeFormatted = totalFee === 0 ? "Gratis" : `Rp${new Intl.NumberFormat("id-ID").format(totalFee)}`;
     const savingsFormatted = `Rp${new Intl.NumberFormat("id-ID").format(savings)}`;
@@ -753,26 +619,50 @@ function FlowContainer({
     // Find institution names
     const sourceName = institutions.find(i => i.id === sourceId)?.name || "Sumber";
     const destName = institutions.find(i => i.id === destId)?.name || "Tujuan";
-    const amountFormatted = `Rp${new Intl.NumberFormat("id-ID").format(amountVal)}`;
     
-    let routeSteps = "";
-    if (routeData && routeData.length > 0) {
-      routeSteps = routeData.map((step, idx) => {
-        const fee = step.fee_cost === 0 ? "Gratis" : `Rp${new Intl.NumberFormat("id-ID").format(Number(step.fee_cost))}`;
-        return `${idx + 1}. ${step.from_institution} ➔ ${step.to_institution} (Biaya: ${fee})`;
-      }).join("\n");
+    let routeInfo = "";
+    if (routesData && routesData.length > 0) {
+      if (showAllRoutes) {
+        routeInfo = routesData.map((route, rIdx) => {
+          const rTotalFee = route.reduce((sum, s) => sum + (parseFloat(s.fee_cost as string) || 0), 0);
+          const rFeeFormatted = rTotalFee === 0 ? "Gratis" : `Rp${new Intl.NumberFormat("id-ID").format(rTotalFee)}`;
+          const flow = route.map((s, idx) => {
+            if (idx === 0) return `${s.from_institution} ➔ ${s.to_institution}`;
+            return ` ➔ ${s.to_institution}`;
+          }).join("");
+          
+          const steps = route.map((step, idx) => {
+            const fee = parseFloat(step.fee_cost as string) === 0 ? "Gratis" : `Rp${new Intl.NumberFormat("id-ID").format(Number(step.fee_cost))}`;
+            return `   ${idx + 1}. ${step.from_institution} ➔ ${step.to_institution} (Biaya: ${fee})`;
+          }).join("\n");
+          
+          return `Opsi Rute ${rIdx + 1}: ${flow}\n${steps}\n`;
+        }).join("\n");
+      } else {
+        const bestRoute = routesData[0];
+        const flow = bestRoute.map((s, idx) => {
+          if (idx === 0) return `${s.from_institution} ➔ ${s.to_institution}`;
+          return ` ➔ ${s.to_institution}`;
+        }).join("");
+        
+        const steps = bestRoute.map((step, idx) => {
+          const fee = parseFloat(step.fee_cost as string) === 0 ? "Gratis" : `Rp${new Intl.NumberFormat("id-ID").format(Number(step.fee_cost))}`;
+          return `${idx + 1}. ${step.from_institution} ➔ ${step.to_institution} (Biaya: ${fee})`;
+        }).join("\n");
+        
+        routeInfo = `Rute Terbaik: ${flow}\n${steps}`;
+      }
     }
 
     const shareText = `Dity Flow - Optimasi Rute Transfer Kas Hemat 🚀\n\n` +
       `• Sumber Dana: ${sourceName}\n` +
       `• Tujuan Transfer: ${destName}\n` +
-      `• Nominal: ${amountFormatted}\n` +
-      `• Total Biaya Admin: ${totalFeeFormatted}\n` +
+      `• Total Biaya Admin Terbaik: ${totalFeeFormatted}\n` +
       `• Total Penghematan: ${savingsFormatted}\n\n` +
-      `Rute Pengiriman:\n${routeSteps}\n\n` +
+      `${routeInfo}\n\n` +
       `Optimalkan transfer kas Anda dengan Dity Flow!\n` +
-      `Cek rute lengkapnya di sini: ${window.location.origin}${window.location.pathname}?source=${sourceId}&dest=${destId}&amount=${amountVal}${bypassQuota ? "&bypass=true" : ""}\n\n` +
-      `Generated by Dity Flow - ${window.location.host}`;
+      `Cek rute lengkapnya di sini: ${window.location.origin}${window.location.pathname}?source=${sourceId}&dest=${destId}${bypassQuota ? "&bypass=true" : ""}\n\n` +
+      `Generated by Dity Flow`;
 
     const copyToClipboardFallback = (text: string) => {
       navigator.clipboard.writeText(text).then(() => {
@@ -800,14 +690,308 @@ function FlowContainer({
     }
   };
 
-  return (
-    <div id="flowchart-export-area" className="bg-theme-card border border-theme-border rounded-[24px] p-5 sm:p-6 md:p-8 lg:p-10 relative flex flex-col overflow-hidden min-h-[480px]">
+  const handleOpenPreview = async () => {
+    if (document.fullscreenElement) {
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+        await new Promise(r => setTimeout(r, 300));
+      } catch (err) {
+        console.error("Failed to exit fullscreen", err);
+      }
+    }
+
+    setIsGeneratingPreview(true);
+    setIsPreviewModalOpen(true);
+    setPreviewImageSrc("");
+    
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = function(el: Element, pseudoElt?: string) {
+      const style = originalGetComputedStyle.call(window, el, pseudoElt);
+      return new Proxy(style, {
+        get(target, prop) {
+          const value = Reflect.get(target, prop);
+          if (typeof value === "function") {
+            return value.bind(target);
+          }
+          return value;
+        }
+      });
+    };
+
+    try {
+      const isMobile = window.innerWidth < 768;
+      const fitPadding = isMobile ? 0.35 : 0.25;
+      fitView({ padding: fitPadding });
+      await new Promise(r => setTimeout(r, 900));
+
+      const container = flowContainerRef.current;
+      if (!container) throw new Error("Sandbox container not found");
+      
+      const watermark = container.querySelector(".export-watermark");
+      if (watermark) watermark.classList.remove("hidden");
+      
+      const originalOverflow = container.style.overflow;
+      container.style.overflow = "visible";
+
+      const dataUrl = await toPng(container, {
+        backgroundColor: isDark ? "#050505" : "#f8fafc",
+        pixelRatio: 3,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        },
+        skipFonts: true,
+        filter: (element) => {
+          if (!element || !(element instanceof Element)) return true;
+          return !(element.hasAttribute("data-html2canvas-ignore") || 
+                   element.classList?.contains("react-flow__controls") ||
+                   element.classList?.contains("react-flow__attribution") ||
+                   element.closest("[data-html2canvas-ignore]") !== null);
+        }
+      });
+
+      container.style.overflow = originalOverflow;
+      if (watermark) watermark.classList.add("hidden");
+
+      fitView({ padding: 0.2, duration: 0 });
+      setPreviewImageSrc(dataUrl);
+
+    } catch (err) {
+      console.error(err);
+      setToastMsg("Gagal memuat pratinjau gambar.");
+      setTimeout(() => setToastMsg(null), 3000);
+      setIsPreviewModalOpen(false);
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+      setIsGeneratingPreview(false);
+    }
+  };
+
+  const handleSavePNGFromPreview = () => {
+    if (!previewImageSrc) return;
+    const link = document.createElement("a");
+    link.download = `dity-flow-route-${Date.now()}.png`;
+    link.href = previewImageSrc;
+    link.click();
+    setIsPreviewModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (routesData && routesData.length > 0) {
+      const routesHash = JSON.stringify(routesData.map(r => r.map(s => `${s.route_id}-${s.from_institution}-${s.to_institution}`).join('-')).join('|'));
+      const isNewData = routesHash !== lastRoutesDataHash.current;
+      
+      const isHorizontal = orientation === "horizontal";
+      const routeColors = ['#00C853', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4'];
+      
+      const dagreGraph = new dagre.graphlib.Graph();
+      dagreGraph.setDefaultEdgeLabel(() => ({}));
+      
+      const direction = isHorizontal ? 'LR' : 'TB';
+      // Increased separation for branches to prevent clumping
+      const ranksep = isHorizontal ? 350 : 300;
+      const nodesep = isHorizontal ? 300 : 700; 
+      const edgesep = 200;
+      dagreGraph.setGraph({ 
+        rankdir: direction, 
+        marginx: 150, 
+        marginy: 150, 
+        nodesep, 
+        edgesep, 
+        ranksep, 
+        ranker: 'network-simplex'
+      });
+
+      const nodeWidth = 200;
+      const nodeHeight = 100;
+
+      const uniqueNodesMap = new Map<string, any>();
+      const edgesList: any[] = [];
+      const edgesMap = new Map<string, boolean>();
+
+      // Extract unique nodes and build edge list with route-specific data
+      routesData.forEach((route, routeIndex) => {
+        const routeColor = routeColors[routeIndex % routeColors.length];
+        const routeIdValue = route[0]?.route_id || (routeIndex + 1);
+        
+        route.forEach((step) => {
+          // Track unique institutions
+          [step.from_institution, step.to_institution].forEach(instId => {
+            if (!uniqueNodesMap.has(instId)) {
+              const instInfo = institutions.find(i => i.id === instId);
+              uniqueNodesMap.set(instId, { 
+                id: instId, 
+                name: instInfo?.name || instId,
+                logo_url: instInfo?.logo_url,
+                type: instInfo?.type 
+              });
+            }
+          });
+
+          // Unique edge per route path segment
+          const edgeId = `edge-${step.from_institution}-${step.to_institution}`;
+          const existingEdge = edgesList.find(e => e.id === edgeId);
+
+          if (existingEdge) {
+            // Add route ID to the list of routes this edge belongs to
+            if (!existingEdge.data.belongsToRoutes.includes(routeIdValue)) {
+              existingEdge.data.belongsToRoutes.push(routeIdValue);
+            }
+          } else {
+            edgesList.push({
+              id: edgeId,
+              source: step.from_institution,
+              target: step.to_institution,
+              type: "stepEdge",
+              animated: (selectedEdgeId === null && highlightedRouteId === null) || selectedEdgeId === edgeId || (highlightedRouteId !== null && [routeIdValue].includes(highlightedRouteId)),
+              data: {
+                fee_cost: step.fee_cost,
+                deduction_type: step.deduction_type,
+                step_notes: step.step_notes,
+                routeColor: routeColor,
+                orientation,
+                isSelected: selectedEdgeId === edgeId,
+                isAnySelected: selectedEdgeId !== null,
+                onSelect: () => setSelectedEdgeId(edgeId),
+                belongsToRoutes: [routeIdValue],
+                highlightedRouteId
+              },
+            });
+          }
+        });
+      });
+
+      const nodesList: any[] = Array.from(uniqueNodesMap.values()).map(n => {
+        let isNodeSelected = false;
+        if (selectedEdgeId) {
+          const selectedEdge = edgesList.find(e => e.id === selectedEdgeId);
+          if (selectedEdge && (selectedEdge.source === n.id || selectedEdge.target === n.id)) {
+            isNodeSelected = true;
+          }
+        }
+
+        // Check if node belongs to highlighted route
+        const nodeBelongsToRoutes = edgesList
+            .filter(e => e.source === n.id || e.target === n.id)
+            .flatMap(e => e.data.belongsToRoutes);
+        const uniqueBelongsTo = Array.from(new Set(nodeBelongsToRoutes));
+
+        return {
+          id: n.id,
+          type: "institutionNode",
+          data: {
+            id: n.id,
+            label: n.name,
+            logo_url: n.logo_url,
+            type: n.type,
+            isFirst: n.id === sourceId,
+            isLast: n.id === destId,
+            orientation,
+            isAnySelected: selectedEdgeId !== null || highlightedRouteId !== null,
+            isNodeSelected: isNodeSelected || (highlightedRouteId !== null && uniqueBelongsTo.includes(highlightedRouteId)),
+            belongsToRoutes: uniqueBelongsTo,
+            highlightedRouteId
+          }
+        };
+      });
+
+      // Finalize animation and metadata for edges
+      edgesList.forEach(edge => {
+        const isHighlighted = highlightedRouteId !== null && edge.data.belongsToRoutes.includes(highlightedRouteId);
+        edge.animated = (selectedEdgeId === null && highlightedRouteId === null) || selectedEdgeId === edge.id || isHighlighted;
+        edge.data.highlightedRouteId = highlightedRouteId;
+      });
+
+      if (isNewData) {
+        lastRoutesDataHash.current = routesHash;
+        nodesList.forEach((node) => {
+          dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+        });
+
+        edgesList.forEach((edge) => {
+          dagreGraph.setEdge(edge.source, edge.target);
+        });
+
+        dagre.layout(dagreGraph);
+
+        const layoutedNodes = nodesList.map((node) => {
+          const nodeWithPosition = dagreGraph.node(node.id);
+          return {
+            ...node,
+            position: {
+              x: nodeWithPosition.x - nodeWidth / 2,
+              y: nodeWithPosition.y - nodeHeight / 2,
+            }
+          };
+        });
+
+        setNodes(layoutedNodes);
+        setEdges(edgesList);
+        
+        setTimeout(() => {
+          fitView({ padding: 0.25, duration: 400 });
+        }, 100);
+      } else {
+        // Just update metadata without overriding positions
+        setNodes(nds => nds.map(node => {
+          const newNodeData = nodesList.find(n => n.id === node.id);
+          if (newNodeData) {
+            return { ...node, data: { ...node.data, ...newNodeData.data } };
+          }
+          return node;
+        }));
+        setEdges(edgesList);
+      }
+    }
+  }, [routesData, orientation, accentColor, selectedEdgeId, fitView, sourceId, destId, institutions, highlightedRouteId]);
+
+return (
+    <div id="optimizer-workspace" className="bg-theme-card border border-theme-border rounded-[24px] p-5 sm:p-6 md:p-8 lg:p-10 relative flex flex-col overflow-hidden min-h-[480px]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4" data-html2canvas-ignore>
         <div>
           <h2 className="text-lg sm:text-xl font-bold">Optimasi Rute Kas</h2>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <span className="bg-theme-badge text-theme-main px-2.5 py-1 rounded-md text-[0.625rem] uppercase tracking-wider font-extrabold border border-theme-border">
-              {routeData.length} Langkah
+              {(() => {
+                if (highlightedRouteId !== null) {
+                  const activeRoute = routesData.find(r => (r[0]?.route_id || 0) === highlightedRouteId || r[0]?.route_id === highlightedRouteId);
+                  if (activeRoute) {
+                    const calculateDepth = (steps: Step[]) => {
+                      if (!steps || steps.length === 0) return 0;
+                      const graph: Record<string, string[]> = {};
+                      steps.forEach(s => {
+                        if (!graph[s.from_institution]) graph[s.from_institution] = [];
+                        graph[s.from_institution].push(s.to_institution);
+                      });
+                      let depth = 0;
+                      let currentNodes = [sourceId];
+                      const visited = new Set<string>();
+                      while (currentNodes.length > 0) {
+                        let nextNodes: string[] = [];
+                        for (const node of currentNodes) {
+                          if (visited.has(node)) continue;
+                          visited.add(node);
+                          if (node === destId) return depth;
+                          const neighbors = graph[node] || [];
+                          nextNodes.push(...neighbors);
+                        }
+                        currentNodes = nextNodes;
+                        depth++;
+                        if (depth > 12) break;
+                      }
+                      return depth || steps.length;
+                    };
+                    return `${calculateDepth(activeRoute)} Langkah Terpilih`;
+                  }
+                }
+                return `${routesData.length} Rute`;
+              })()}
             </span>
             {isExpensive && (
               <div className="bg-rose-500/10 border border-rose-500/30 text-rose-500 px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase flex items-center gap-1.5 animate-pulse">
@@ -867,8 +1051,14 @@ function FlowContainer({
         {isFullscreen && (
           <div className="flex items-center justify-between border-b border-theme-border bg-theme-bg px-4 py-3 sm:px-6 z-20" data-html2canvas-ignore>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-theme-accent flex items-center justify-center">
-                <Zap className="w-5 h-5 text-theme-inverted" />
+              <div 
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-lg overflow-hidden p-1.5 ${isDark ? 'bg-[#121214] border border-[#242426]' : 'bg-[#00ba68]'}`}
+              >
+                <img 
+                  src={isDark ? "/assets/logo-green.svg" : "/assets/logo-white.svg"} 
+                  alt="Dity Flow" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="flex flex-col">
                 <h3 className="text-sm sm:text-base font-black text-theme-main tracking-tight leading-none">
@@ -880,11 +1070,12 @@ function FlowContainer({
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={toggleFullscreen}
-                className="p-2 sm:px-4 sm:py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all flex items-center gap-2 group cursor-pointer"
+                className="p-2.5 rounded-xl bg-theme-card border border-theme-border hover:border-theme-accent transition-all flex items-center gap-2 group cursor-pointer"
               >
-                <X className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
-                <span className="hidden md:inline text-xs font-bold text-rose-500">Keluar dari Layar Penuh</span>
+                <X className="w-4 h-4 text-theme-main group-hover:scale-110 transition-transform" />
+                <span className="hidden md:inline text-xs font-bold text-theme-main">Keluar</span>
               </button>
             </div>
           </div>
@@ -897,12 +1088,18 @@ function FlowContainer({
             defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed } }}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onEdgeClick={(_event, edge) => setSelectedEdgeId(edge.id)}
-            onPaneClick={() => setSelectedEdgeId(null)}
+            onEdgeClick={(_event, edge) => {
+              setSelectedEdgeId(edge.id);
+              setHighlightedRouteId(null);
+            }}
+            onPaneClick={() => {
+              setSelectedEdgeId(null);
+              setHighlightedRouteId(null);
+            }}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
-            fitViewOptions={{ padding: 0.2 }}
+            fitViewOptions={{ padding: 0.25 }}
             minZoom={0.2}
             maxZoom={1.5}
             nodesConnectable={false}
@@ -1085,11 +1282,10 @@ function FlowContainer({
         </div>
       )}
     </div>
-  );
+  )
 }
 
-// Global Main Page Component
-export default function AppMain() {
+export function AppMain() {
   const [isDark, setIsDark] = useState(document.documentElement.classList.contains("dark"));
 
   useEffect(() => {
@@ -1112,21 +1308,25 @@ export default function AppMain() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [sourceId, setSourceId] = useState("");
   const [destId, setDestId] = useState("");
-  const [amountVal, setAmountVal] = useState<number>(0);
-  const [amountStr, setAmountStr] = useState("");
   const [bypassQuota, setBypassQuota] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [cacheNotice, setCacheNotice] = useState("");
-  const [routeData, setRouteData] = useState<Step[]>([]);
+
+  const [allRouteData, setAllRouteData] = useState<Step[][]>([]);
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
-  const [lastSearchParams, setLastSearchParams] = useState<{src: string, dst: string, amount: number, bypass: boolean} | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [highlightedRouteId, setHighlightedRouteId] = useState<number | null>(null);
+  const [isRoutesExpanded, setIsRoutesExpanded] = useState(false);
+  const [lastSearchParams, setLastSearchParams] = useState<{src: string, dst: string, bypass: boolean} | null>(null);
 
   // Config options matching original
   const [flowTheme, setFlowTheme] = useState<"default" | "ocean" | "vibrant">("default");
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">("vertical");
   const [compareFees, setCompareFees] = useState(true);
+  const [showAllRoutes, setShowAllRoutes] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   // Track global theme changes
   useEffect(() => {
@@ -1169,14 +1369,24 @@ export default function AppMain() {
     async function loadData() {
       setLoading(true);
       setLoadingMsg("Sinkronisasi data...");
+      console.log("Fetching institutions from Supabase...");
       try {
-        const response = await fetch(`${SUPABASE_URL}/institutions?select=id,name,type&is_active=eq.true`, { headers });
+        const response = await fetch(`${SUPABASE_URL}/institutions?select=id,name,type,logo_url&is_active=eq.true`, { 
+          headers: {
+            ...headers,
+            "Cache-Control": "no-cache"
+          } 
+        });
         if (!response.ok) {
-          throw new Error("Gagal mengambil data lembaga keuangan.");
+          const errBody = await response.text();
+          console.error("Institution fetch failed:", response.status, errBody);
+          throw new Error(`Gagal mengambil data lembaga keuangan (Status: ${response.status}).`);
         }
         const data = await response.json();
+        console.log("Institutions loaded:", data.length);
         setInstitutions(data);
       } catch (err: any) {
+        console.error("Fetch error:", err);
         setErrorMsg(err.message || "Gagal terhubung ke database rute.");
       } finally {
         setLoading(false);
@@ -1198,15 +1408,11 @@ export default function AppMain() {
     const params = new URLSearchParams(window.location.search);
     const src = params.get("source");
     const dst = params.get("dest");
-    const amt = params.get("amount");
     const bypass = params.get("bypass");
 
-    if (src && dst && amt) {
+    if (src && dst) {
       setSourceId(src);
       setDestId(dst);
-      const numericAmt = parseFloat(amt) || 0;
-      setAmountVal(numericAmt);
-      setAmountStr(new Intl.NumberFormat("id-ID").format(numericAmt));
       if (bypass === "true") {
         setBypassQuota(true);
       }
@@ -1220,25 +1426,18 @@ export default function AppMain() {
       const params = new URLSearchParams(window.location.search);
       const src = params.get("source");
       const dst = params.get("dest");
-      const amt = params.get("amount");
-      if (src && dst && amt) {
-        handleSearch(src, dst, parseFloat(amt), params.get("bypass") === "true");
+      if (src && dst) {
+        handleSearch(src, dst, params.get("bypass") === "true");
       }
     }
   }, [institutions]);
 
-  // Form amount masking logic
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9]/g, "");
-    if (raw) {
-      const num = parseInt(raw, 10);
-      setAmountVal(num);
-      setAmountStr(new Intl.NumberFormat("id-ID").format(num));
-    } else {
-      setAmountVal(0);
-      setAmountStr("");
+  useEffect(() => {
+    if (errorMsg) {
+      const timer = setTimeout(() => setErrorMsg(""), 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [errorMsg]);
 
   // Perform search route querying
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -1247,14 +1446,10 @@ export default function AppMain() {
       setErrorMsg("Harap pilih sumber dana dan tujuan transfer.");
       return;
     }
-    if (amountVal <= 0) {
-      setErrorMsg("Harap masukkan nominal transaksi lebih dari Rp0.");
-      return;
-    }
-    handleSearch(sourceId, destId, amountVal, bypassQuota);
+    handleSearch(sourceId, destId, bypassQuota);
   };
 
-  const saveSearchToCache = (src: string, dst: string, amount: number, bypass: boolean, data: any) => {
+  const saveSearchToCache = (src: string, dst: string, bypass: boolean, data: any) => {
     try {
       const cachedStr = localStorage.getItem("dityFlowCachedSearchResults");
       let cache: any[] = [];
@@ -1265,13 +1460,12 @@ export default function AppMain() {
       const newItem = {
         src,
         dst,
-        amount,
         bypass,
         data,
         timestamp: Date.now()
       };
       
-      let updated = [newItem, ...cache.filter((item: any) => !(item.src === src && item.dst === dst && item.amount === amount && item.bypass === bypass))];
+      let updated = [newItem, ...cache.filter((item: any) => !(item.src === src && item.dst === dst && item.bypass === bypass))];
       if (updated.length > 5) {
         updated = updated.slice(0, 5);
       }
@@ -1281,43 +1475,99 @@ export default function AppMain() {
     }
   };
 
-  const handleSearch = async (src: string, dst: string, amount: number, bypass: boolean) => {
+  const handleSearch = async (src: string, dst: string, bypass: boolean) => {
     setErrorMsg("");
-    setCacheNotice("");
     setLoading(true);
     setLoadingMsg("Menganalisis rute terhemat...");
-    setRouteData([]);
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/rpc/find_cheapest_route`, {
+      const response = await fetch(`${SUPABASE_URL}/rpc/find_all_routes`, {
         method: "POST",
         headers,
         body: JSON.stringify({
           p_source: src,
           p_destination: dst,
-          p_amount: amount,
+          p_amount: 100000, // Default amount since it's removed from UI
           p_bypass_quota: bypass ? 1 : 0
         })
       });
 
       if (!response.ok) {
-        throw new Error("Gagal mengambil data rute dari server.");
+        const errText = await response.text();
+        console.error("Supabase error response:", response.status, errText);
+        throw new Error(`Gagal (Status: ${response.status}). ${errText}`);
       }
 
       const data = await response.json();
       if (!data || data.length === 0) {
         setErrorMsg("Maaf, tidak ada rute transfer yang sesuai untuk kriteria ini.");
       } else {
-        setRouteData(data);
-        saveSearch(src, dst, amount, bypass);
-        saveSearchToCache(src, dst, amount, bypass, data);
-        setLastSearchParams({ src, dst, amount, bypass });
+        // Group by route_id and filter cycles
+        const grouped: { [key: string]: Step[] } = {};
+        data.forEach((step: Step) => {
+          const rid = step.route_id?.toString() || "default";
+          if (!grouped[rid]) grouped[rid] = [];
+          
+          // Simple cycle prevention: if from and to are same, or if to already exists in path, skip or handle
+          const currentPath = grouped[rid];
+          const nodesInPath = new Set(currentPath.flatMap(s => [s.from_institution, s.to_institution]));
+          
+          // Only add if it doesn't create a trivial loop or if it's the first step
+          if (step.from_institution !== step.to_institution) {
+             grouped[rid].push(step);
+          }
+        });
+
+        // Refined Cycle Detection: Keep only the path from source to dest
+        const cleanedRouteLists = Object.values(grouped).map(route => {
+          const graph: Record<string, Step[]> = {};
+          route.forEach(s => {
+            if (!graph[s.from_institution]) graph[s.from_institution] = [];
+            graph[s.from_institution].push(s);
+          });
+          
+          // BFS to find shortest path in this specific route bucket
+          const queue: {node: string, path: Step[]}[] = [{node: src, path: []}];
+          const visited = new Set<string>();
+          while (queue.length > 0) {
+            const {node, path} = queue.shift()!;
+            if (node === dst) return path;
+            if (visited.has(node)) continue;
+            visited.add(node);
+            
+            const nextSteps = graph[node] || [];
+            nextSteps.forEach(s => {
+              queue.push({node: s.to_institution, path: [...path, s]});
+            });
+          }
+          return route; // fallback
+        }).filter(r => r.length > 0);
+
+        const routeLists = cleanedRouteLists.sort((a, b) => {
+          const feeA = parseFloat(a[0]?.total_route_fee as string) || 0;
+          const feeB = parseFloat(b[0]?.total_route_fee as string) || 0;
+          return feeA - feeB;
+        });
+
+        setAllRouteData(routeLists);
+        saveSearch(src, dst, bypass);
+        saveSearchToCache(src, dst, bypass, data);
+        setLastSearchParams({ src, dst, bypass });
+        
+        // Auto highlight first route and scroll to workspace
+        if (routeLists.length > 0) {
+          const firstRid = routeLists[0][0].route_id || 1;
+          setHighlightedRouteId(firstRid);
+          setTimeout(() => {
+            const el = document.getElementById('optimizer-workspace');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        }
 
         // Update URL query params cleanly for sharing
         const url = new URL(window.location.href);
         url.searchParams.set("source", src);
         url.searchParams.set("dest", dst);
-        url.searchParams.set("amount", amount.toString());
         if (bypass) {
           url.searchParams.set("bypass", "true");
         } else {
@@ -1336,18 +1586,20 @@ export default function AppMain() {
           const cachedItem = cache.find((item: any) => 
             item.src === src && 
             item.dst === dst && 
-            item.amount === amount && 
             item.bypass === bypass
           );
           if (cachedItem) {
-            setRouteData(cachedItem.data);
-            setLastSearchParams({ src, dst, amount, bypass });
-            setCacheNotice("Koneksi bermasalah atau offline. Menampilkan rute hasil pencarian teroptimasi dari cache lokal.");
+            setAllRouteData(cachedItem.data);
+            setLastSearchParams({ src, dst, bypass });
             
+            if (cachedItem.data.length > 0) {
+              const firstRid = cachedItem.data[0][0]?.route_id || 1;
+              setHighlightedRouteId(firstRid);
+            }
+
             const url = new URL(window.location.href);
             url.searchParams.set("source", src);
             url.searchParams.set("dest", dst);
-            url.searchParams.set("amount", amount.toString());
             if (bypass) {
               url.searchParams.set("bypass", "true");
             } else {
@@ -1360,28 +1612,29 @@ export default function AppMain() {
           console.error("Error reading cache", e);
         }
       }
-      setErrorMsg("Terjadi kegagalan komunikasi dengan basis data rute. Silakan coba sesaat lagi.");
+      setErrorMsg(`Terjadi kegagalan komunikasi dengan basis data rute. ${err?.message || "Silakan coba sesaat lagi."}`);
     } finally {
       setLoading(false);
     }
   };
 
   // Save searches to local storage
-  const saveSearch = (src: string, dst: string, amount: number, bypass: boolean) => {
-    const srcName = institutions.find(i => i.id === src)?.name || "Sumber";
-    const dstName = institutions.find(i => i.id === dst)?.name || "Tujuan";
+  const saveSearch = (src: string, dst: string, bypass: boolean) => {
+    const srcObj = institutions.find(i => i.id === src);
+    const dstObj = institutions.find(i => i.id === dst);
 
     const newItem = {
       source: src,
       dest: dst,
-      sourceName: srcName,
-      destName: dstName,
-      amount,
+      sourceName: srcObj?.name || "Sumber",
+      destName: dstObj?.name || "Tujuan",
+      sourceLogo: srcObj?.logo_url,
+      destLogo: dstObj?.logo_url,
       bypassQuota: bypass,
       timestamp: Date.now()
     };
 
-    let updated = [newItem, ...recentSearches.filter(item => !(item.source === src && item.dest === dst && item.amount === amount))];
+    let updated = [newItem, ...recentSearches.filter(item => !(item.source === src && item.dest === dst))];
     if (updated.length > 5) {
       updated = updated.slice(0, 5);
     }
@@ -1392,10 +1645,8 @@ export default function AppMain() {
   const handleRecentClick = (item: any) => {
     setSourceId(item.source);
     setDestId(item.dest);
-    setAmountVal(item.amount);
-    setAmountStr(new Intl.NumberFormat("id-ID").format(item.amount));
     setBypassQuota(item.bypassQuota || false);
-    handleSearch(item.source, item.dest, item.amount, item.bypassQuota || false);
+    handleSearch(item.source, item.dest, item.bypassQuota || false);
   };
 
   const clearRecentSearches = () => {
@@ -1406,10 +1657,8 @@ export default function AppMain() {
   const handleReset = () => {
     setSourceId("");
     setDestId("");
-    setAmountVal(0);
-    setAmountStr("");
     setBypassQuota(false);
-    setRouteData([]);
+    setAllRouteData([]);
     setLastSearchParams(null);
     setErrorMsg("");
     
@@ -1422,20 +1671,72 @@ export default function AppMain() {
     window.history.pushState({}, "", url.toString());
   };
 
-  // Calculate stats
-  const { totalFee, savings } = useMemo(() => {
-    let fee = 0;
-    routeData.forEach(step => {
-      fee += parseFloat(step.fee_cost as string) || 0;
+  const maxFee = 6500;
+
+  const filteredRoutes = useMemo(() => {
+    if (!allRouteData || allRouteData.length === 0) return [];
+    return allRouteData.filter(route => {
+      const routeFee = parseFloat(route[0]?.total_route_fee as string) || 0;
+      return routeFee <= maxFee;
     });
-    // Standard direct transfer cost usually Rp 6.500 or Rp 2.500
+  }, [allRouteData]);
+
+  const totalPages = Math.ceil(filteredRoutes.length / itemsPerPage);
+
+  const displayedRoutes = useMemo(() => {
+    if (filteredRoutes.length === 0) return [];
+    
+    if (showAllRoutes) {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      return filteredRoutes.slice(startIndex, startIndex + itemsPerPage);
+    } else {
+      return [filteredRoutes[0]];
+    }
+  }, [filteredRoutes, showAllRoutes, currentPage]);
+
+  // Sync page when highlightedRouteId changes
+  useEffect(() => {
+    if (highlightedRouteId !== null && showAllRoutes) {
+      const routeIndex = filteredRoutes.findIndex(r => (r[0]?.route_id || 0) === highlightedRouteId);
+      if (routeIndex !== -1) {
+        const targetPage = Math.ceil((routeIndex + 1) / itemsPerPage);
+        if (targetPage !== currentPage) {
+          setCurrentPage(targetPage);
+        }
+      }
+    }
+  }, [highlightedRouteId, showAllRoutes, filteredRoutes]);
+
+  // Auto-highlight logic
+  useEffect(() => {
+    if (displayedRoutes.length > 0) {
+      // If we are showing only one route, or if filteredRoutes has only one route, highlight it
+      if (!showAllRoutes || filteredRoutes.length === 1) {
+        const firstRouteId = displayedRoutes[0][0]?.route_id || 1;
+        if (highlightedRouteId !== firstRouteId) {
+          setHighlightedRouteId(firstRouteId);
+        }
+      }
+    } else if (filteredRoutes.length === 0) {
+      if (highlightedRouteId !== null) {
+        setHighlightedRouteId(null);
+      }
+    }
+  }, [displayedRoutes, showAllRoutes, filteredRoutes.length, highlightedRouteId]);
+
+  // Provide stats for the *first* (best) route for global usage if needed
+  const { totalFee, savings } = useMemo(() => {
+    const firstRoute = displayedRoutes[0] || [];
+    const fee = parseFloat(firstRoute[0]?.total_route_fee as string) || 0;
+    
+    // Standard direct transfer cost usually Rp 6.500
     const standardDirectCost = 6500;
     const computedSavings = Math.max(0, standardDirectCost - fee);
     return {
       totalFee: fee,
       savings: computedSavings
     };
-  }, [routeData]);
+  }, [displayedRoutes]);
 
   const swipeTheme = (direction: number) => {
     const themes: Array<"default" | "ocean" | "vibrant"> = ["default", "ocean", "vibrant"];
@@ -1448,24 +1749,8 @@ export default function AppMain() {
 
   return (
     <div className="flex-1 flex flex-col w-full min-h-screen relative">
-      {/* Alert Notification */}
-      {cacheNotice && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 transition-all duration-300 animate-bounce">
-          <div className="bg-theme-card border border-emerald-500/50 text-emerald-200 p-4 rounded-2xl shadow-2xl flex items-start gap-3 backdrop-blur-md">
-            <WifiOff className="w-6 h-6 text-emerald-500 flex-shrink-0 mt-0.5 animate-pulse" />
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-emerald-400">Mode Cache Offline</h4>
-              <p className="text-sm mt-0.5 opacity-90 leading-relaxed">{cacheNotice}</p>
-            </div>
-            <button onClick={() => setCacheNotice("")} className="text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {errorMsg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 transition-all duration-300 animate-bounce">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 transition-all duration-300 animate-bounce">
           <div className="bg-theme-card border border-rose-500/50 text-rose-200 p-4 rounded-2xl shadow-2xl flex items-start gap-3 backdrop-blur-md">
             <AlertCircle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -1501,7 +1786,7 @@ export default function AppMain() {
               <form onSubmit={handleSearchSubmit} className="flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-black tracking-tight text-theme-main">Optimizer Transfer</h2>
-                  {(sourceId || destId || amountVal > 0) && (
+                  {(sourceId || destId) && (
                     <button 
                       type="button" 
                       onClick={handleReset} 
@@ -1527,7 +1812,7 @@ export default function AppMain() {
                 </div>
 
                 {/* Destination Institution select */}
-                <div className="mb-6">
+                <div className="mb-8">
                   <CustomSelect
                     label="Tujuan Transfer"
                     placeholder="Pilih Tujuan Dana"
@@ -1537,39 +1822,6 @@ export default function AppMain() {
                     excludeId={sourceId}
                     defaultText="Pilih Tujuan Dana"
                   />
-                </div>
-
-                {/* Amount input block with formatted rupiah input and Tooltip */}
-                <div className="mb-8">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <label className="text-[0.625rem] sm:text-[0.6875rem] uppercase tracking-[0.1em] text-theme-textDim font-semibold">
-                      Nominal Transaksi
-                    </label>
-                    <div className="relative inline-block cursor-help text-theme-textDim hover:text-theme-main group">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-[10px] p-2.5 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none font-bold leading-normal text-center border border-slate-800">
-                        Masukkan nominal transaksi untuk menghitung rute biaya transfer terhemat
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-800 rotate-45"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="relative flex items-center bg-theme-card border border-theme-border rounded-xl focus-within:border-theme-accent transition-colors pl-4">
-                    <span className="text-theme-main opacity-40 text-base sm:text-[0.9375rem] font-bold">Rp</span>
-                    <input 
-                      type="text" 
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={amountStr}
-                      onChange={handleAmountChange}
-                      required 
-                      placeholder="0" 
-                      className="w-full bg-transparent border-none outline-none py-3.5 pl-2 pr-4 text-base sm:text-[0.9375rem] text-theme-main font-semibold"
-                      autoComplete="off"
-                    />
-                  </div>
                 </div>
 
                 {/* Limit Quota bypass setting with Tooltip */}
@@ -1604,6 +1856,28 @@ export default function AppMain() {
                   </div>
                 </div>
 
+                {/* Show All Routes Setting */}
+                <div className="mb-4 flex items-start gap-3 select-none">
+                  <div className="flex items-center h-5">
+                    <div 
+                      id="show-all-routes-checkbox"
+                      onClick={() => setShowAllRoutes(!showAllRoutes)}
+                      className={`w-5 h-5 rounded-[6px] border-2 flex items-center justify-center cursor-pointer transition-all ${
+                        showAllRoutes 
+                          ? "bg-theme-accent border-theme-accent text-theme-inverted" 
+                          : "border-theme-border bg-theme-card text-transparent"
+                      }`}
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  </div>
+                  <div className="relative group flex items-center gap-1.5 pt-0.5">
+                    <label onClick={() => setShowAllRoutes(!showAllRoutes)} className="text-xs sm:text-[0.8125rem] text-theme-textDim cursor-pointer select-none leading-tight hover:text-theme-main transition-colors font-medium">
+                      Tampilkan Semua Kemungkinan Rute
+                    </label>
+                  </div>
+                </div>
+
                 {/* Search Submit button */}
                 <div className="pt-4 lg:pt-6">
                   <button 
@@ -1611,11 +1885,9 @@ export default function AppMain() {
                     disabled={
                       !sourceId || 
                       !destId || 
-                      amountVal <= 0 || 
                       (lastSearchParams && 
                         sourceId === lastSearchParams.src && 
                         destId === lastSearchParams.dst && 
-                        amountVal === lastSearchParams.amount && 
                         bypassQuota === lastSearchParams.bypass)
                     }
                     className="w-full py-4 px-4 bg-theme-accent text-theme-inverted font-extrabold rounded-xl text-base hover:opacity-90 transition-opacity flex justify-center items-center gap-2 shimmer-btn cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
@@ -1653,24 +1925,48 @@ export default function AppMain() {
                       onClick={() => handleRecentClick(item)}
                       className="w-full bg-theme-bg border border-theme-border hover:border-theme-accent hover:bg-theme-accent/5 p-3 rounded-xl flex items-center justify-between group transition-all text-left cursor-pointer"
                     >
-                      <div className="flex flex-col flex-1 truncate mr-2">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs sm:text-[0.8125rem] font-bold text-theme-main group-hover:text-theme-accent transition-colors truncate">
-                            {item.sourceName} &rarr; {item.destName}
-                          </span>
-                          {item.bypassQuota ? (
-                            <span className="text-[0.5rem] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
-                              Limit Admin
-                            </span>
+                      <div className="flex items-center gap-3 flex-1 truncate mr-2">
+                        <div className="flex -space-x-2 shrink-0">
+                          {item.sourceLogo ? (
+                            <div className="w-8 h-8 rounded-lg bg-theme-bg p-1 border border-theme-border shadow-sm overflow-hidden z-10">
+                              <img src={item.sourceLogo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            </div>
                           ) : (
-                            <span className="text-[0.5rem] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
-                              Bebas Admin
-                            </span>
+                            <div className="w-8 h-8 rounded-lg bg-theme-badge border border-theme-border flex items-center justify-center z-10">
+                              <Landmark className="w-3.5 h-3.5 text-theme-textDim" />
+                            </div>
+                          )}
+                          {item.destLogo ? (
+                            <div className="w-8 h-8 rounded-lg bg-theme-bg p-1 border border-theme-border shadow-sm overflow-hidden">
+                              <img src={item.destLogo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-theme-badge border border-theme-border flex items-center justify-center">
+                              <Landmark className="w-3.5 h-3.5 text-theme-textDim" />
+                            </div>
                           )}
                         </div>
-                        <span className="text-[0.625rem] sm:text-[0.6875rem] text-theme-textDim font-mono">
-                          Rp{new Intl.NumberFormat("id-ID").format(item.amount)}
-                        </span>
+                        <div className="flex flex-col truncate">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-xs sm:text-[0.8125rem] font-bold text-theme-main group-hover:text-theme-accent transition-colors truncate">
+                              {item.sourceName} &rarr; {item.destName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[0.625rem] sm:text-[0.6875rem] text-theme-textDim font-mono font-bold">
+                              Rp{new Intl.NumberFormat("id-ID").format(item.amount)}
+                            </span>
+                            {item.bypassQuota ? (
+                              <span className="text-[0.5rem] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
+                                Limit Admin
+                              </span>
+                            ) : (
+                              <span className="text-[0.5rem] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
+                                Bebas Admin
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-theme-accent shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
                     </button>
@@ -1683,139 +1979,205 @@ export default function AppMain() {
           {/* Right Column: Main results & flow workspace */}
           <main className="md:col-span-8 flex flex-col gap-6 w-full">
             {/* Empty State visual */}
-            {routeData.length === 0 && (
+            {displayedRoutes.length === 0 && (
               <div className="flex-1 flex border-2 border-dashed border-theme-border rounded-[24px] flex-col items-center justify-center p-8 text-center bg-theme-card min-h-[400px]">
                 <div className="w-16 h-16 bg-theme-badge border border-theme-border rounded-full flex items-center justify-center mb-5 text-theme-accent shadow-sm">
                   <ArrowLeftRight className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-extrabold text-theme-main">Belum ada rute terpilih</h3>
                 <p className="text-theme-textDim mt-2 text-sm max-w-sm font-medium">
-                  Silakan isi formulir di samping untuk menemukan rute transfer terbaik.
+                  Silakan isi formulir <span className="md:hidden">di atas</span><span className="hidden md:inline">di samping</span> untuk menemukan rute transfer terbaik.
                 </p>
               </div>
             )}
 
             {/* Results Block */}
-            {routeData.length > 0 && (
-              <div className="flex flex-col gap-6 w-full animate-fade-in">
-                
-                {/* Route Summary Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-html2canvas-ignore>
-                  
-                  {/* Total Biaya Admin Card with toggle */}
-                  <div className="bg-theme-card border border-theme-border rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-xs text-theme-textDim font-bold uppercase tracking-widest">Total Biaya Admin</span>
+            {displayedRoutes.length > 0 && (
+              <div className="flex flex-col gap-10 w-full animate-fade-in pt-4">
+
+                {/* Alert Badges */}
+                <div className="flex flex-col gap-3">
+                  {displayedRoutes.some(route => route.some(s => s.deduction_type === 'DEDUCTED_FROM_TARGET')) && (
+                    <div className="bg-rose-500/10 border border-rose-500/30 text-rose-500 rounded-xl p-3.5 text-sm font-semibold flex items-start gap-3 shadow-sm animate-fade-in">
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="leading-relaxed">PENTING: Terdapat rute dengan biaya admin dipotong dari saldo tujuan. Pastikan nominal transfer dilebihkan!</p>
+                    </div>
+                  )}
+                  {displayedRoutes.some(route => route.some(s => s.to_institution === 'FLIP' || s.from_institution === 'FLIP')) && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-xl p-3.5 text-sm font-semibold flex items-start gap-3 shadow-sm animate-fade-in">
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="leading-relaxed">Transfer via FLIP wajib menggunakan 3 digit kode unik (misal: Rp50.123). Kode unik akan dikembalikan berupa koin.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Route Alternatives Stats Card List */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-theme-textDim">Pilihan Rute yang Tersedia</h3>
+                    <span className="text-[10px] text-theme-textDim/70 font-medium transition-all duration-500">{filteredRoutes.length} Rute Aktif</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-html2canvas-ignore>
+                    {displayedRoutes.map((routeList, routeIdx) => {
+                      const localFee = parseFloat(routeList[0]?.total_route_fee as string) || 0;
+                      const localSavings = Math.max(0, 6500 - localFee);
                       
-                      {/* Bandingkan Biaya Admin Toggle nested here */}
-                      <div className="flex items-center gap-2 select-none">
+                      // Calculate path depth (real steps count from start to end)
+                      const calculateDepth = (steps: Step[]) => {
+                        if (!steps || steps.length === 0) return 0;
+                        const graph: Record<string, string[]> = {};
+                        steps.forEach(s => {
+                          if (!graph[s.from_institution]) graph[s.from_institution] = [];
+                          graph[s.from_institution].push(s.to_institution);
+                        });
+                        let depth = 0;
+                        let currentNodes = [sourceId];
+                        const visited = new Set<string>();
+                        while (currentNodes.length > 0) {
+                          let nextNodes: string[] = [];
+                          for (const node of currentNodes) {
+                            if (visited.has(node)) continue;
+                            visited.add(node);
+                            if (node === destId) return depth;
+                            const neighbors = graph[node] || [];
+                            nextNodes.push(...neighbors);
+                          }
+                          currentNodes = nextNodes;
+                          depth++;
+                          if (depth > 12) break;
+                        }
+                        return depth || steps.length;
+                      };
+                      
+                      const localSteps = calculateDepth(routeList);
+                      const routeId = routeList[0]?.route_id || (routeIdx + 1);
+                      const isHighlighted = highlightedRouteId === routeId;
+                      const globalRouteIdx = filteredRoutes.findIndex(r => (r[0]?.route_id || 0) === routeId);
+                      
+                      // Get route flow string
+                      const flowString = routeList.map((s, idx) => {
+                        if (idx === 0) return `${s.from_institution} ➔ ${s.to_institution}`;
+                        return ` ➔ ${s.to_institution}`;
+                      }).join("");
+
+                      const routeColors = ['#00C853', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4'];
+                      const getRouteColor = (rid: number) => routeColors[(rid - 1) % routeColors.length];
+                      const activeColor = getRouteColor(routeId);
+
+                      return (
                         <div 
-                          id="compare-fees-checkbox-main"
-                          onClick={() => setCompareFees(!compareFees)}
-                          className={`w-4 h-4 rounded-[4px] border flex items-center justify-center cursor-pointer transition-all ${
-                            compareFees 
-                              ? "bg-theme-accent border-theme-accent text-theme-inverted" 
-                              : "border-theme-border bg-theme-bg text-transparent"
+                          key={routeId} 
+                          className={`bg-theme-card border-2 rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4 transition-all relative group overflow-hidden ${
+                            isHighlighted ? 'ring-4 ring-offset-0 scale-[1.02] z-10' : 'border-theme-border/60 hover:border-theme-accent/50 hover:shadow-lg'
                           }`}
+                          style={{
+                            borderColor: isHighlighted ? activeColor : undefined,
+                            boxShadow: isHighlighted ? `0 12px 24px -8px ${activeColor}44` : undefined
+                          }}
                         >
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                        <div className="relative group flex items-center gap-1">
-                          <label onClick={() => setCompareFees(!compareFees)} className="text-[10px] text-theme-textDim cursor-pointer select-none font-extrabold uppercase tracking-wider hover:text-theme-main transition-colors">
-                            Bandingkan
-                          </label>
-                          <div className="relative inline-block cursor-help text-theme-textDim hover:text-theme-main">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 text-white text-[10px] p-2.5 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none font-bold leading-normal text-center border border-slate-800">
-                              Bandingkan penghematan rute transfer Dity Flow dengan biaya transfer langsung biasa (Rp6.500)
-                              <div className="absolute top-full right-2 w-2 h-2 bg-slate-900 border-r border-b border-slate-800 rotate-45"></div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span 
+                              className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider ${isHighlighted ? 'text-theme-inverted' : 'border border-theme-border text-theme-textDim bg-theme-badge'}`}
+                              style={{ backgroundColor: isHighlighted ? activeColor : undefined }}
+                            >
+                              Rute {globalRouteIdx + 1}
+                            </span>
+                            <span className="bg-theme-badge border border-theme-border text-theme-main text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              {localSteps} Langkah
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <div className="text-[10px] font-bold text-theme-textDim uppercase tracking-widest leading-normal">
+                              {flowString}
+                            </div>
+                            <div className="text-xl font-black text-theme-main mt-1">
+                              Rp{new Intl.NumberFormat("id-ID").format(localFee)}
+                            </div>
+                            <div className="text-[10px] text-emerald-500 font-extrabold flex items-center gap-1">
+                              <Zap className="w-3 h-3 fill-current" />
+                              Hemat Rp{new Intl.NumberFormat("id-ID").format(localSavings)}
                             </div>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // If there's only one route, don't allow un-highlighting
+                              if (filteredRoutes.length === 1) {
+                                setHighlightedRouteId(routeId);
+                              } else {
+                                setHighlightedRouteId(isHighlighted ? null : routeId);
+                              }
+                              setSelectedEdgeId(null);
+                              document.getElementById('optimizer-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }}
+                            className={`w-full py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all relative overflow-hidden group shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
+                              isHighlighted 
+                                ? 'text-theme-inverted' 
+                                : 'bg-theme-badge border border-theme-border text-theme-main hover:border-theme-accent'
+                            }`}
+                            style={{ backgroundColor: isHighlighted ? activeColor : undefined }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                            {isHighlighted ? 'Rute Aktif' : 'Lihat Rute'}
+                            <Scan className="w-3.5 h-3.5" />
+                          </button>
                         </div>
+                      );
+                    })}
+                  </div>
+
+                  {showAllRoutes && filteredRoutes.length > 4 && totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-3 mt-10 pb-6">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-3 rounded-xl border-2 border-theme-border text-theme-main disabled:opacity-20 disabled:cursor-not-allowed hover:border-theme-accent hover:bg-theme-badge transition-all active:scale-90"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const currentGroupIndex = Math.floor((currentPage - 1) / 3);
+                          const groupStartPage = currentGroupIndex * 3 + 1;
+                          const visiblePages = Array.from({ length: 3 }, (_, i) => groupStartPage + i).filter(p => p <= totalPages);
+                          return visiblePages.map((page) => (
+                            <button
+                              key={page}
+                              type="button"
+                              onClick={() => setCurrentPage(page)}
+                              className={`w-11 h-11 rounded-xl text-xs font-black transition-all flex items-center justify-center ${
+                                currentPage === page
+                                  ? 'bg-theme-accent text-theme-inverted shadow-xl shadow-theme-accent/20 scale-110 z-10'
+                                  : 'border-2 border-theme-border text-theme-textDim hover:border-theme-accent hover:text-theme-main hover:bg-theme-badge'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ));
+                        })()}
                       </div>
-                    </div>
 
-                    <div>
-                      {compareFees ? (
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="text-2xl font-black text-theme-main">
-                            {totalFee === 0 ? "Rp0" : `Rp${new Intl.NumberFormat("id-ID").format(totalFee)}`}
-                          </span>
-                          <span className="text-xs font-bold text-theme-textDim">vs</span>
-                          <span className="text-lg font-bold text-theme-textDim/50 line-through decoration-rose-500">
-                            Rp6.500
-                          </span>
-                          <span className="text-[10px] text-theme-textDim font-medium block w-full mt-1">
-                            (Biaya Transfer Langsung)
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-black text-theme-main">
-                            {totalFee === 0 ? "Rp0" : `Rp${new Intl.NumberFormat("id-ID").format(totalFee)}`}
-                          </span>
-                          {totalFee === 0 && (
-                            <span className="bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase">
-                              Gratis
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-3 rounded-xl border-2 border-theme-border text-theme-main disabled:opacity-20 disabled:cursor-not-allowed hover:border-theme-accent hover:bg-theme-badge transition-all active:scale-90"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Total Penghematan Card */}
-                  <div className="bg-theme-card border border-theme-border rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-                    <span className="text-xs text-theme-textDim font-bold uppercase tracking-widest">Total Penghematan</span>
-                    <div>
-                      <span className="text-2xl font-black text-emerald-500">
-                        Rp{new Intl.NumberFormat("id-ID").format(savings)}
-                      </span>
-                      <span className="text-[10px] text-theme-textDim block mt-1.5 font-medium">
-                        Dibanding biaya transfer langsung (Rp6.500)
-                      </span>
-                    </div>
-                  </div>
-
+                  )}
                 </div>
 
-                {/* Theme control bar */}
-                <div className="flex items-center justify-between gap-4 border-b border-theme-border pb-6" data-html2canvas-ignore>
-                  <div className="text-xs font-bold text-theme-textDim bg-theme-bg/50 px-3 py-1.5 rounded-xl border border-theme-borderDim select-none">
-                    Tata Letak: <span className="text-theme-main font-extrabold">Vertikal</span>
-                  </div>
-
-                  {/* Flow Themes swipe bar */}
-                  <div className="flex items-center gap-3 bg-theme-card border border-theme-border rounded-xl px-3 py-1.5 select-none">
-                    <button 
-                      type="button" 
-                      onClick={() => swipeTheme(-1)} 
-                      className="text-theme-textDim hover:text-theme-main transition-colors p-1.5 bg-theme-bg border border-theme-border rounded-lg shadow-sm cursor-pointer"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="flex items-center gap-2 select-none text-xs font-extrabold text-theme-main tracking-wider">
-                      Tema: <span className="text-theme-accent">{flowTheme === "default" ? "Default" : flowTheme === "ocean" ? "Ocean" : "Vibrant"}</span>
-                    </div>
-
-                    <button 
-                      type="button" 
-                      onClick={() => swipeTheme(1)} 
-                      className="text-theme-textDim hover:text-theme-main transition-colors p-1.5 bg-theme-bg border border-theme-border rounded-lg shadow-sm cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* The Reactive Canvas Area */}
+                {/* The Combined Reactive Canvas Area */}
                 <ReactFlowProvider>
-                  <FlowContainer 
-                    routeData={routeData} 
+                  <MultiFlowContainer 
+                    routesData={displayedRoutes} 
+                    allRouteData={allRouteData}
                     orientation={orientation} 
                     flowTheme={flowTheme} 
                     accentColor={accentColor} 
@@ -1830,8 +2192,12 @@ export default function AppMain() {
                     sourceId={sourceId}
                     destId={destId}
                     institutions={institutions}
-                    amountVal={amountVal}
                     bypassQuota={bypassQuota}
+                    showAllRoutes={showAllRoutes}
+                    highlightedRouteId={highlightedRouteId}
+                    setHighlightedRouteId={setHighlightedRouteId}
+                    selectedEdgeId={selectedEdgeId}
+                    setSelectedEdgeId={setSelectedEdgeId}
                   />
                 </ReactFlowProvider>
               </div>
@@ -1864,24 +2230,45 @@ export default function AppMain() {
                     onClick={() => handleRecentClick(item)}
                     className="w-full bg-theme-bg border border-theme-border hover:border-theme-accent hover:bg-theme-accent/5 p-3 rounded-xl flex items-center justify-between group transition-all text-left cursor-pointer"
                   >
-                    <div className="flex flex-col flex-1 truncate mr-2">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs sm:text-[0.8125rem] font-bold text-theme-main group-hover:text-theme-accent transition-colors truncate">
-                          {item.sourceName} &rarr; {item.destName}
-                        </span>
-                        {item.bypassQuota ? (
-                          <span className="text-[0.5rem] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
-                            Limit Admin
-                          </span>
+                    <div className="flex items-center gap-3 flex-1 truncate mr-2">
+                      <div className="flex -space-x-2 shrink-0">
+                        {item.sourceLogo ? (
+                          <div className="w-8 h-8 rounded-lg bg-theme-bg p-1 border border-theme-border shadow-sm overflow-hidden z-10">
+                            <img src={item.sourceLogo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          </div>
                         ) : (
-                          <span className="text-[0.5rem] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
-                            Bebas Admin
-                          </span>
+                          <div className="w-8 h-8 rounded-lg bg-theme-badge border border-theme-border flex items-center justify-center z-10">
+                            <Landmark className="w-3.5 h-3.5 text-theme-textDim" />
+                          </div>
+                        )}
+                        {item.destLogo ? (
+                          <div className="w-8 h-8 rounded-lg bg-theme-bg p-1 border border-theme-border shadow-sm overflow-hidden">
+                            <img src={item.destLogo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-theme-badge border border-theme-border flex items-center justify-center">
+                            <Landmark className="w-3.5 h-3.5 text-theme-textDim" />
+                          </div>
                         )}
                       </div>
-                      <span className="text-[0.625rem] sm:text-[0.6875rem] text-theme-textDim font-mono">
-                        Rp{new Intl.NumberFormat("id-ID").format(item.amount)}
-                      </span>
+                      <div className="flex flex-col truncate">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs sm:text-[0.8125rem] font-bold text-theme-main group-hover:text-theme-accent transition-colors truncate">
+                            {item.sourceName} &rarr; {item.destName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {item.bypassQuota ? (
+                            <span className="text-[0.5rem] bg-rose-500/10 text-rose-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
+                              Limit Admin
+                            </span>
+                          ) : (
+                            <span className="text-[0.5rem] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded uppercase font-extrabold shrink-0">
+                              Bebas Admin
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-theme-accent shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
                   </button>

@@ -58,6 +58,7 @@ export function Footer({
     { href: "/privacy", label: "Kebijakan Privasi" },
     { href: "/terms", label: "Syarat & Ketentuan" },
     { href: "/help", label: "Pusat Bantuan" },
+    // { href: "/sumber-data", label: "Sumber Data" },
   ],
   copyright = {
     text: "© 2026 Dity Flow. Hak cipta dilindungi.",

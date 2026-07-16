@@ -31,9 +31,9 @@
   body.is-printing [data-html2canvas-ignore],
   body.is-printing .react-flow__controls,
   body.is-printing .react-flow__attribution,
-  body.is-printing .md:col-span-4,
+  body.is-printing .md\:col-span-4,
   body.is-printing main > *:not(#flowchart-export-area),
-  body.is-printing .block.md:hidden {
+  body.is-printing .block.md\:hidden {
     display: none !important;
   }
 
